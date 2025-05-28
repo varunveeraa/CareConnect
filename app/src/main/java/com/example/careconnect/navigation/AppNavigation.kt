@@ -79,7 +79,7 @@ fun AppNavigation(
         }
         
         composable(Screen.Chat.route) {
-            ChatScreen()
+            ChatScreen(currentUser = currentUser)
         }
         
         composable(Screen.Settings.route) {

@@ -228,7 +228,7 @@ fun PeopleScreen(
                 .fillMaxWidth()
                 .height(56.dp), // Reduced height for search bar
             singleLine = true,
-            colors = TextFieldDefaults.outlinedTextFieldColors(
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Color.Gray
             )
