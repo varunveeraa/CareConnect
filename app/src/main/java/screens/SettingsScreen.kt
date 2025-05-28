@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,85 +14,101 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    authViewModel: FirebaseAuthViewModel = viewModel()
+) {
     var accessibilityEnabled by remember { mutableStateOf(true) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Browse") },
-                    label = { Text("BROWSE") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.InsertChart, contentDescription = "Patterns") },
-                    label = { Text("PATTERNS") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("HOME") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Chat, contentDescription = "Chat") },
-                    label = { Text("CHAT") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("SETTINGS") },
-                    selected = true,
-                    onClick = {}
-                )
-            }
-        }
-    ) { innerPadding ->
-        Column(
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize()
+    ) {
+        Text(
+            text = "Settings",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        HorizontalDivider()
+
+        SettingsRow("Account") { /* TODO: Navigate to Account */ }
+        SettingsRow("Notifications") { /* TODO: Navigate to Notifications */ }
+        SettingsRow("Reminders") { /* TODO: Navigate to Reminders */ }
+
+        Row(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize()
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Accessibility", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Switch(
+                checked = accessibilityEnabled,
+                onCheckedChange = { accessibilityEnabled = it }
+            )
+        }
+
+        HorizontalDivider()
+
+        SettingsRow("Help") { /* TODO: Navigate to Help */ }
+        
+        HorizontalDivider()
+        
+        // Sign Out Button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showSignOutDialog = true }
+                .padding(vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Settings",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                "Sign Out", 
+                fontSize = 16.sp, 
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.error
             )
-
-            Divider()
-
-            SettingsRow("Account") { /* TODO: Navigate to Account */ }
-            SettingsRow("Notifications") { /* TODO: Navigate to Notifications */ }
-            SettingsRow("Reminders") { /* TODO: Navigate to Reminders */ }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Accessibility", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Switch(
-                    checked = accessibilityEnabled,
-                    onCheckedChange = { accessibilityEnabled = it }
-                )
-            }
-
-            Divider()
-
-            SettingsRow("Help") { /* TODO: Navigate to Help */ }
+            Icon(
+                Icons.AutoMirrored.Filled.ExitToApp, 
+                contentDescription = "Sign Out",
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
         }
+    }
+    
+    // Sign Out Confirmation Dialog
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        authViewModel.logout()
+                        showSignOutDialog = false
+                    }
+                ) {
+                    Text("Sign Out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -106,7 +123,6 @@ fun SettingsRow(title: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Icon(Icons.Default.ArrowForwardIos, contentDescription = "Go", modifier = Modifier.size(18.dp))
+        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = "Go", modifier = Modifier.size(18.dp))
     }
 }
-
