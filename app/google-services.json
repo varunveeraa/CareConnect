@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "145087343992",
+    "project_id": "careconnect-86fa4",
+    "storage_bucket": "careconnect-86fa4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:145087343992:android:f20c8b3037e65c66ac6c8d",
+        "android_client_info": {
+          "package_name": "com.example.careconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnD-lyicUUlPU8ATpFtbV4U41-Coiv-QY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

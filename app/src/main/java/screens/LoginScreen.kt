@@ -11,16 +11,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.viewmodel.FirebaseAuthViewModel
+import com.example.careconnect.viewmodel.FirebaseAuthState
 
 @Composable
 fun LoginScreen(
-    onLoginClick: () -> Unit = {},
-    onSignUpClick: () -> Unit = {},
-    onForgotPasswordClick: () -> Unit = {}
+    authViewModel: FirebaseAuthViewModel = viewModel(),
+    onSignUpClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
+    var showForgotPassword by remember { mutableStateOf(false) }
+
+    val authState by authViewModel.authState.collectAsState()
+    val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
+    val isLoading = authState is FirebaseAuthState.Loading
 
     Column(
         modifier = Modifier
@@ -41,9 +49,13 @@ fun LoginScreen(
         Text("Email", modifier = Modifier.align(Alignment.Start))
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = { 
+                email = it
+                authViewModel.resetAuthError()
+            },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -51,10 +63,14 @@ fun LoginScreen(
         Text("Password", modifier = Modifier.align(Alignment.Start))
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { 
+                password = it
+                authViewModel.resetAuthError()
+            },
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -71,7 +87,8 @@ fun LoginScreen(
             ) {
                 Checkbox(
                     checked = rememberMe,
-                    onCheckedChange = { rememberMe = it }
+                    onCheckedChange = { rememberMe = it },
+                    enabled = !isLoading
                 )
                 Text(text = "Remember me")
             }
@@ -79,19 +96,40 @@ fun LoginScreen(
             Text(
                 text = "Forgot password?",
                 color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.clickable { onForgotPasswordClick() }
+                modifier = Modifier.clickable(enabled = !isLoading) { 
+                    showForgotPassword = true 
+                }
+            )
+        }
+
+        // Show auth error
+        val currentAuthState = authState
+        if (currentAuthState is FirebaseAuthState.Error) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = currentAuthState.message,
+                color = MaterialTheme.colorScheme.error
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { onLoginClick() },
+            onClick = {
+                if (email.isNotBlank() && password.isNotBlank()) {
+                    authViewModel.login(email, password)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(48.dp),
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
         ) {
-            Text("Log In")
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+            } else {
+                Text("Log In")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -107,7 +145,21 @@ fun LoginScreen(
         Text(
             text = "Sign Up",
             color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.clickable { onSignUpClick() }
+            modifier = Modifier.clickable(enabled = !isLoading) { onSignUpClick() }
+        )
+    }
+
+    // Forgot Password Dialog
+    if (showForgotPassword) {
+        ForgotPasswordDialog(
+            onDismiss = { 
+                showForgotPassword = false
+                authViewModel.resetForgotPasswordState()
+            },
+            onSendEmail = { emailAddress ->
+                authViewModel.forgotPassword(emailAddress)
+            },
+            forgotPasswordState = forgotPasswordState
         )
     }
 }

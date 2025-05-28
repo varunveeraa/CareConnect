@@ -13,97 +13,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Chat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Search, contentDescription = "Browse") },
-                    label = { Text("BROWSE") },
-                    selected = false,
-                    onClick = { /* TODO */ }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = "Patterns") },
-                    label = { Text("PATTERNS") },
-                    selected = false,
-                    onClick = { /* TODO */ }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("HOME") },
-                    selected = true,
-                    onClick = { /* Already on Home */ }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Chat, contentDescription = "Chat") },
-                    label = { Text("CHAT") },
-                    selected = false,
-                    onClick = { /* TODO */ }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("SETTINGS") },
-                    selected = false,
-                    onClick = { /* TODO */ }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Column(
+    Column(
+        modifier = Modifier
+            .padding(24.dp)
+            .fillMaxSize()
+    ) {
+        Text(
+            text = "Dashboard",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
             modifier = Modifier
-                .padding(paddingValues)
-                .padding(24.dp)
-                .fillMaxSize()
+                .fillMaxWidth()
+                .background(Color.LightGray, RoundedCornerShape(8.dp))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text(
-                text = "Dashboard",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            MetricCard("70", "Heart Rate")
+            MetricCard("7", "Sleep Hours")
+            MetricCard("1000", "Step Count")
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.LightGray, RoundedCornerShape(8.dp))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+        Text(
+            text = "Reminders",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color.LightGray,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                MetricCard("70", "Heart Rate")
-                MetricCard("7", "Sleep Hours")
-                MetricCard("1000", "Step Count")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Reminders",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = Color.LightGray,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(text = "“Hi mom, did you take your iron tablet?”")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { /* Send logic */ }) {
-                        Text("Send")
-                    }
+                Text(text = "“Hi mom, did you take your iron tablet?”")
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { /* Send logic */ }) {
+                    Text("Send")
                 }
             }
         }
