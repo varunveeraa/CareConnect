@@ -13,8 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.AppDatabase
-import com.example.careconnect.database.DataSeeder
-import com.example.careconnect.firestore.FirestoreDataSeeder
 import com.example.careconnect.screens.MainAppScreen
 import com.example.careconnect.screens.AuthScreen
 import com.example.careconnect.screens.OnboardingScreen
@@ -59,15 +57,6 @@ fun CareConnectApp() {
             is FirebaseAuthState.Authenticated -> {
                 // User is signed in and onboarded, show main app with navigation
                 val database = AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current)
-                
-                // Seed sample data for testing (both local and Firestore)
-                LaunchedEffect(Unit) {
-                    val dataSeeder = DataSeeder(database)
-                    dataSeeder.seedSampleUsers()
-                    
-                    val firestoreDataSeeder = FirestoreDataSeeder()
-                    firestoreDataSeeder.seedSampleUsers()
-                }
                 
                 val socialRepository = SocialRepository(
                     userDao = database.userDao(),
