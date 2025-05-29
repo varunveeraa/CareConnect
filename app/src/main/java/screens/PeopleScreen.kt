@@ -82,11 +82,6 @@ fun RawUserItem(
                     text = rawUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = rawUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (rawUser.focusAreas.isNotEmpty()) {
                     Text(
                         text = "Focus: ${rawUser.focusAreas.joinToString(", ")}",
@@ -569,11 +564,6 @@ fun FirestoreUserItem(
                     text = firestoreUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = firestoreUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (!firestoreUser.focusArea.isNullOrBlank()) {
                     Text(
                         text = "Focus: ${firestoreUser.focusArea}",
@@ -583,11 +573,8 @@ fun FirestoreUserItem(
                 }
             }
 
-            // Follow button (simplified for Firestore users)
             Button(
                 onClick = {
-                    // For now, just show that it would send a follow request
-                    // In a real app, you'd need to map Firestore UID to local user ID
                 }
             ) {
                 Text("Connect")
@@ -636,11 +623,6 @@ fun ActualUserItem(
                     text = actualUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = actualUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (actualUser.focusAreas.isNotEmpty()) {
                     Text(
                         text = "Focus: ${actualUser.focusAreas.joinToString(", ")}",
@@ -650,11 +632,8 @@ fun ActualUserItem(
                 }
             }
 
-            // Follow button (simplified for Firestore users)
             Button(
                 onClick = {
-                    // For now, just show that it would send a follow request
-                    // In a real app, you'd need to map Firestore UID to local user ID
                 }
             ) {
                 Text("Connect")
@@ -711,11 +690,6 @@ fun UserItem(
                 Text(
                     text = user.fullName,
                     fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = user.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
                 )
                 if (!user.focusArea.isNullOrBlank()) {
                     Text(
