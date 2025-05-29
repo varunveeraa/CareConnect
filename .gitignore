@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 # Built application files
 *.apk
 *.ap_
@@ -17,31 +15,10 @@ gen/
 out/
 release/
 
->>>>>>> 40acfd351766119c399c22dccf4094cdd029f1df
 # Gradle files
 .gradle/
 build/
 
-<<<<<<< HEAD
-# IDE files
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Local configuration
-local.properties
-
-# Android specific
-*.apk
-*.ap_
-*.dex
-proguard/
-=======
 # Local configuration file (sdk path, etc)
 local.properties
 
@@ -99,4 +76,3 @@ fastlane/readme.md
 # OS-specific files
 Thumbs.db
 .DS_Store
->>>>>>> 40acfd351766119c399c22dccf4094cdd029f1df
