@@ -37,7 +37,10 @@ fun HealthToolsScreen(
     val monthlySummary by healthViewModel.monthlySummary.collectAsState()
     val isLoading by healthViewModel.isLoading.collectAsState()
     val connectionStatus by healthViewModel.connectionStatus.collectAsState()
-    
+
+    var expandedSection by remember { mutableStateOf<String?>(null) }
+    var selectedPeriod by remember { mutableStateOf<MetricsPeriod>(MetricsPeriod.DAILY) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,44 +89,169 @@ fun HealthToolsScreen(
                 )
             }
         }
-        
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+
+        // Accordion sections
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Summary Section
+            AccordionSection(
+                title = "Summary",
+                isExpanded = expandedSection == "summary",
+                onExpandChange = {
+                    expandedSection = if (expandedSection == "summary") null else "summary"
+                }
             ) {
-                CircularProgressIndicator()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
+                        onClick = { selectedPeriod = MetricsPeriod.DAILY },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedPeriod == MetricsPeriod.DAILY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (selectedPeriod == MetricsPeriod.DAILY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(text = "Daily")
+                    }
+
+                    Button(
+                        onClick = { selectedPeriod = MetricsPeriod.WEEKLY },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedPeriod == MetricsPeriod.WEEKLY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (selectedPeriod == MetricsPeriod.WEEKLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(text = "Weekly")
+                    }
+
+                    Button(
+                        onClick = { selectedPeriod = MetricsPeriod.MONTHLY },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selectedPeriod == MetricsPeriod.MONTHLY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (selectedPeriod == MetricsPeriod.MONTHLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(text = "Monthly")
+                    }
+                }
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        when (selectedPeriod) {
+                            MetricsPeriod.DAILY -> HealthSummaryCard(
+                                title = "Daily Summary",
+                                summary = dailySummary,
+                                period = MetricsPeriod.DAILY
+                            )
+
+                            MetricsPeriod.WEEKLY -> HealthSummaryCard(
+                                title = "Weekly Summary",
+                                summary = weeklySummary,
+                                period = MetricsPeriod.WEEKLY
+                            )
+
+                            MetricsPeriod.MONTHLY -> HealthSummaryCard(
+                                title = "Monthly Summary",
+                                summary = monthlySummary,
+                                period = MetricsPeriod.MONTHLY
+                            )
+                        }
+
+                        // Move the detailed view button to the bottom
+                        OutlinedButton(
+                            onClick = { onNavigateToDetailedView(selectedPeriod) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                        ) {
+                            Text(text = "Detailed View")
+                        }
+                    }
+                }
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+
+            // Reminders Section
+            AccordionSection(
+                title = "Reminders",
+                isExpanded = expandedSection == "reminders",
+                onExpandChange = {
+                    expandedSection = if (expandedSection == "reminders") null else "reminders"
+                }
             ) {
-                item {
-                    HealthSummaryCard(
-                        title = "Daily Summary",
-                        summary = dailySummary,
-                        period = MetricsPeriod.DAILY,
-                        onDetailedViewClick = onNavigateToDetailedView
-                    )
+                Text(
+                    text = "Reminders content coming soon",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Maps Section
+            AccordionSection(
+                title = "Maps",
+                isExpanded = expandedSection == "maps",
+                onExpandChange = {
+                    expandedSection = if (expandedSection == "maps") null else "maps"
                 }
-                
-                item {
-                    HealthSummaryCard(
-                        title = "Weekly Summary",
-                        summary = weeklySummary,
-                        period = MetricsPeriod.WEEKLY,
-                        onDetailedViewClick = onNavigateToDetailedView
-                    )
-                }
-                
-                item {
-                    HealthSummaryCard(
-                        title = "Monthly Summary",
-                        summary = monthlySummary,
-                        period = MetricsPeriod.MONTHLY,
-                        onDetailedViewClick = onNavigateToDetailedView
-                    )
-                }
+            ) {
+                Text(
+                    text = "Maps content coming soon",
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AccordionSection(
+    title: String,
+    isExpanded: Boolean,
+    onExpandChange: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandChange() }
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                )
+            }
+
+            if (isExpanded) {
+                content()
             }
         }
     }
@@ -133,8 +261,7 @@ fun HealthToolsScreen(
 fun HealthSummaryCard(
     title: String,
     summary: HealthSummary?,
-    period: MetricsPeriod,
-    onDetailedViewClick: (MetricsPeriod) -> Unit
+    period: MetricsPeriod
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -143,31 +270,14 @@ fun HealthSummaryCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                OutlinedButton(
-                    onClick = { onDetailedViewClick(period) },
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Text(
-                        text = "Detailed View",
-                        fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.CenterVertically)
-                    )
-                }
-            }
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             if (summary != null && summary.totalDays > 0) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -179,7 +289,7 @@ fun HealthSummaryCard(
                         icon = Icons.Default.DirectionsWalk,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    
+
                     MetricItem(
                         title = "Heart Rate",
                         value = "${summary.avgHeartRate.roundToInt()}",
@@ -190,7 +300,7 @@ fun HealthSummaryCard(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -202,7 +312,7 @@ fun HealthSummaryCard(
                         icon = Icons.Default.Bedtime,
                         color = MaterialTheme.colorScheme.secondary
                     )
-                    
+
                     MetricItem(
                         title = "Calories",
                         value = "${summary.avgCalories.roundToInt()}",
@@ -211,9 +321,9 @@ fun HealthSummaryCard(
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "Based on ${summary.totalDays} day${if (summary.totalDays != 1) "s" else ""} of data",
                     fontSize = 12.sp,
