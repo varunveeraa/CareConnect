@@ -177,12 +177,18 @@ fun ChatScreen(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Button(
+                OutlinedButton(
                     onClick = { sendMessage() },
-                    shape = CircleShape,
-                    enabled = messageText.isNotBlank() && !isLoading
+                    enabled = messageText.isNotBlank() && !isLoading,
+                    shape = RoundedCornerShape(25.dp),
+                    modifier = Modifier.height(56.dp),
+                    contentPadding = PaddingValues(16.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Send",
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -395,12 +401,12 @@ fun ChatBubble(message: ChatMessage, currentUser: User) {
                         if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(12.dp)
                     )
-                    .padding(12.dp)
-                    .widthIn(max = 280.dp)
+                    .padding(8.dp)
+                    .widthIn(max = 240.dp)
             ) {
                 Text(
                     text = message.content,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
