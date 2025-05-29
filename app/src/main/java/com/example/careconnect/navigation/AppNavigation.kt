@@ -16,10 +16,15 @@ import com.example.careconnect.database.User
 import com.example.careconnect.screens.*
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.SocialViewModel
+import com.example.careconnect.health.MetricsPeriod
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Browse : Screen("browse")
+    object HealthTools : Screen("health_tools")
+    object HealthDetailedView : Screen("health_detailed_view/{period}") {
+        fun createRoute(period: String) = "health_detailed_view/$period"
+    }
     object Patterns : Screen("patterns")
     object People : Screen("people")
     object Chat : Screen("chat")
@@ -56,7 +61,31 @@ fun AppNavigation(
         }
         
         composable(Screen.Browse.route) {
-            BrowseScreen()
+            HealthToolsScreen(
+                onNavigateToDetailedView = { period ->
+                    navController.navigate(Screen.HealthDetailedView.createRoute(period.name))
+                }
+            )
+        }
+        
+        composable(Screen.HealthTools.route) {
+            HealthToolsScreen(
+                onNavigateToDetailedView = { period ->
+                    navController.navigate(Screen.HealthDetailedView.createRoute(period.name))
+                }
+            )
+        }
+        
+        composable(Screen.HealthDetailedView.route) { backStackEntry ->
+            val periodName = backStackEntry.arguments?.getString("period") ?: "DAILY"
+            val period = MetricsPeriod.values().find { it.name == periodName } ?: MetricsPeriod.DAILY
+            
+            HealthDetailedViewScreen(
+                period = period,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
         
         composable(Screen.Patterns.route) {

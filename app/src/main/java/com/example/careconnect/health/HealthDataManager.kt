@@ -31,6 +31,15 @@ data class DailyHealthData(
     constructor() : this("", 0, 0f, 0f, 0f, 0L)
 }
 
+data class HealthSummary(
+    val avgStepCount: Int = 0,
+    val avgHeartRate: Float = 0f,
+    val avgSleepHours: Float = 0f,
+    val avgCalories: Float = 0f,
+    val totalDays: Int = 0,
+    val period: String = ""
+)
+
 enum class WearableType(val displayName: String) {
     GOOGLE_FIT("Google Fit"),
     MI_FITNESS("Mi Fitness"),
@@ -38,10 +47,10 @@ enum class WearableType(val displayName: String) {
     SAMSUNG_HEALTH("Samsung Health")
 }
 
-enum class MetricsPeriod(val displayName: String) {
-    DAILY("Daily"),
-    WEEKLY("Weekly"),
-    MONTHLY("Monthly")
+enum class MetricsPeriod(val displayName: String, val days: Int) {
+    DAILY("Daily", 1),
+    WEEKLY("Weekly", 7),
+    MONTHLY("Monthly", 30)
 }
 
 class HealthDataManager(private val context: Context) {
@@ -53,6 +62,7 @@ class HealthDataManager(private val context: Context) {
         private const val PREF_CONNECTED_WEARABLE = "connected_wearable"
         private const val PREF_CONNECTION_STATUS = "connection_status"
         private const val PREF_LAST_SYNC = "last_sync"
+        private const val PREF_DUMMY_DATA_GENERATED = "dummy_data_generated"
     }
     
     /**
@@ -86,8 +96,11 @@ class HealthDataManager(private val context: Context) {
                 .putLong(PREF_LAST_SYNC, System.currentTimeMillis())
                 .apply()
             
-            // Store dummy health data when connecting
-            storeDummyHealthData()
+            // Store dummy health data when connecting (only once per user)
+            if (!prefs.getBoolean(PREF_DUMMY_DATA_GENERATED, false)) {
+                storeDummyHealthData()
+                prefs.edit().putBoolean(PREF_DUMMY_DATA_GENERATED, true).apply()
+            }
             
             true
         } catch (e: Exception) {
@@ -120,40 +133,121 @@ class HealthDataManager(private val context: Context) {
             return null
         }
         
-        // Simulate data fetching delay
-        delay(1000)
+        // Get today's data from Firestore
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         
-        // Generate realistic mock data
+        try {
+            val document = db.collection("users").document(getCurrentUserId())
+                .collection("healthData").document(today)
+                .get().await()
+            
+            if (document.exists()) {
+                val data = document.toObject(DailyHealthData::class.java)
+                return data?.let {
+                    HealthMetrics(
+                        stepCount = it.stepCount,
+                        heartRate = it.heartRate,
+                        sleepHours = it.sleepHours,
+                        calories = it.calories,
+                        lastUpdated = it.timestamp
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            // Fallback to generated data
+        }
+        
+        // Fallback: Generate realistic mock data with user-specific seed
+        val userSeed = getCurrentUserId().hashCode().toLong()
+        val random = Random(userSeed + System.currentTimeMillis() / (24 * 60 * 60 * 1000)) // Change daily
+        
         return HealthMetrics(
-            stepCount = Random.nextInt(5000, 15000),
-            heartRate = Random.nextInt(60, 100).toFloat(),
-            sleepHours = Random.nextDouble(6.0, 9.0).toFloat(),
-            calories = Random.nextInt(1800, 2500).toFloat(),
+            stepCount = random.nextInt(5000, 15000),
+            heartRate = random.nextInt(60, 100).toFloat(),
+            sleepHours = random.nextDouble(6.0, 9.0).toFloat(),
+            calories = random.nextInt(1800, 2500).toFloat(),
             lastUpdated = System.currentTimeMillis()
         )
     }
     
     /**
-     * Store dummy health data in Firestore
+     * Store dummy health data in Firestore for current user
      */
     suspend fun storeDummyHealthData() {
-        // Generate 30 days of dummy data
-        val calendar = Calendar.getInstance()
-        calendar.add(Calendar.DAY_OF_YEAR, -30)
+        val userId = getCurrentUserId()
+        val userSeed = userId.hashCode().toLong()
+        val random = Random(userSeed)
         
-        for (i in 0 until 30) {
+        // Generate 90 days of dummy data
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -90)
+        
+        for (i in 0 until 90) {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
-            val date = SimpleDateFormat("yyyy-MM-dd").format(calendar.time)
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            
+            // Use day-specific seed for consistent but varied data
+            val daySeed = userSeed + i
+            val dayRandom = Random(daySeed)
             
             val data = DailyHealthData(
                 date = date,
-                stepCount = Random.nextInt(5000, 15000),
-                heartRate = Random.nextInt(60, 100).toFloat(),
-                sleepHours = Random.nextDouble(6.0, 9.0).toFloat(),
-                calories = Random.nextInt(1800, 2500).toFloat()
+                stepCount = dayRandom.nextInt(4000, 16000),
+                heartRate = (dayRandom.nextInt(55, 105) + dayRandom.nextFloat()).toFloat(),
+                sleepHours = (dayRandom.nextDouble(5.5, 9.5)).toFloat(),
+                calories = (dayRandom.nextInt(1600, 2800) + dayRandom.nextFloat() * 100).toFloat()
             )
             
-            db.collection("users").document(getCurrentUserId())
+            db.collection("users").document(userId)
+                .collection("healthData").document(date)
+                .set(data)
+                .await()
+        }
+    }
+    
+    /**
+     * Generate dummy data for all existing users (admin function)
+     */
+    suspend fun generateDummyDataForAllUsers() {
+        try {
+            val usersSnapshot = db.collection("users").get().await()
+            
+            for (userDoc in usersSnapshot.documents) {
+                val userId = userDoc.id
+                generateDummyDataForUser(userId)
+            }
+        } catch (e: Exception) {
+            // Handle error
+        }
+    }
+    
+    /**
+     * Generate dummy data for a specific user
+     */
+    private suspend fun generateDummyDataForUser(userId: String) {
+        val userSeed = userId.hashCode().toLong()
+            
+        // Generate 90 days of dummy data
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -90)
+        
+        for (i in 0 until 90) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            
+            // Use day-specific seed for consistent but varied data
+            val daySeed = userSeed + i
+            val dayRandom = Random(daySeed)
+            
+            val data = DailyHealthData(
+                date = date,
+                stepCount = dayRandom.nextInt(4000, 16000),
+                heartRate = (dayRandom.nextInt(55, 105) + dayRandom.nextFloat()).toFloat(),
+                sleepHours = (dayRandom.nextDouble(5.5, 9.5)).toFloat(),
+                calories = (dayRandom.nextInt(1600, 2800) + dayRandom.nextFloat() * 100).toFloat()
+            )
+            
+            db.collection("users").document(userId)
                 .collection("healthData").document(date)
                 .set(data)
                 .await()
@@ -193,11 +287,16 @@ class HealthDataManager(private val context: Context) {
      */
     suspend fun fetchHealthMetricsForPeriod(period: MetricsPeriod): List<DailyHealthData> {
         val healthData = mutableListOf<DailyHealthData>()
-        
-        val query = db.collection("users").document(getCurrentUserId())
-            .collection("healthData")
+        val calendar = Calendar.getInstance()
+        calendar.add(Calendar.DAY_OF_YEAR, -period.days)
+        val startDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
         
         try {
+            val query = db.collection("users").document(getCurrentUserId())
+                .collection("healthData")
+                .whereGreaterThanOrEqualTo("date", startDate)
+                .orderBy("date", Query.Direction.ASCENDING)
+            
             val documents = query.get().await()
             for (document in documents) {
                 val data = document.toObject(DailyHealthData::class.java)
@@ -207,7 +306,32 @@ class HealthDataManager(private val context: Context) {
             // Handle error
         }
         
-        return healthData
+        return healthData.takeLast(period.days)
+    }
+    
+    /**
+     * Get health summary for a specific period
+     */
+    suspend fun getHealthSummary(period: MetricsPeriod): HealthSummary {
+        val healthData = fetchHealthMetricsForPeriod(period)
+        
+        if (healthData.isEmpty()) {
+            return HealthSummary(period = period.displayName)
+        }
+        
+        val avgStepCount = healthData.map { it.stepCount }.average().toInt()
+        val avgHeartRate = healthData.map { it.heartRate }.average().toFloat()
+        val avgSleepHours = healthData.map { it.sleepHours }.average().toFloat()
+        val avgCalories = healthData.map { it.calories }.average().toFloat()
+        
+        return HealthSummary(
+            avgStepCount = avgStepCount,
+            avgHeartRate = avgHeartRate,
+            avgSleepHours = avgSleepHours,
+            avgCalories = avgCalories,
+            totalDays = healthData.size,
+            period = period.displayName
+        )
     }
     
     // Get current user ID from Firebase Auth

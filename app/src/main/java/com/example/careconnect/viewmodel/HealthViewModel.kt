@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.careconnect.health.HealthDataManager
 import com.example.careconnect.health.HealthMetrics
 import com.example.careconnect.health.WearableType
+import com.example.careconnect.health.MetricsPeriod
+import com.example.careconnect.health.HealthSummary
+import com.example.careconnect.health.DailyHealthData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +33,21 @@ class HealthViewModel(context: Context) : ViewModel() {
     private val _connectionStatus = MutableStateFlow("")
     val connectionStatus: StateFlow<String> = _connectionStatus.asStateFlow()
     
+    private val _dailySummary = MutableStateFlow<HealthSummary?>(null)
+    val dailySummary: StateFlow<HealthSummary?> = _dailySummary.asStateFlow()
+    
+    private val _weeklySummary = MutableStateFlow<HealthSummary?>(null)
+    val weeklySummary: StateFlow<HealthSummary?> = _weeklySummary.asStateFlow()
+    
+    private val _monthlySummary = MutableStateFlow<HealthSummary?>(null)
+    val monthlySummary: StateFlow<HealthSummary?> = _monthlySummary.asStateFlow()
+    
+    private val _detailedData = MutableStateFlow<List<DailyHealthData>>(emptyList())
+    val detailedData: StateFlow<List<DailyHealthData>> = _detailedData.asStateFlow()
+    
     init {
         checkConnectionStatus()
+        loadHealthSummaries()
     }
     
     private fun checkConnectionStatus() {
@@ -40,6 +56,35 @@ class HealthViewModel(context: Context) : ViewModel() {
         
         if (_isConnected.value) {
             refreshHealthData()
+        }
+    }
+    
+    private fun loadHealthSummaries() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                
+                // Load all summaries concurrently
+                val dailyJob = launch { 
+                    _dailySummary.value = healthDataManager.getHealthSummary(MetricsPeriod.DAILY)
+                }
+                val weeklyJob = launch { 
+                    _weeklySummary.value = healthDataManager.getHealthSummary(MetricsPeriod.WEEKLY)
+                }
+                val monthlyJob = launch { 
+                    _monthlySummary.value = healthDataManager.getHealthSummary(MetricsPeriod.MONTHLY)
+                }
+                
+                // Wait for all to complete
+                dailyJob.join()
+                weeklyJob.join()
+                monthlyJob.join()
+                
+            } catch (e: Exception) {
+                _connectionStatus.value = "Failed to load health summaries"
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
     
@@ -55,6 +100,7 @@ class HealthViewModel(context: Context) : ViewModel() {
                     _connectedWearable.value = wearableType
                     _connectionStatus.value = "Connected to ${wearableType.displayName}"
                     refreshHealthData()
+                    loadHealthSummaries()
                 } else {
                     _connectionStatus.value = "Failed to connect to ${wearableType.displayName}"
                 }
@@ -94,6 +140,20 @@ class HealthViewModel(context: Context) : ViewModel() {
         }
     }
     
+    fun loadDetailedData(period: MetricsPeriod) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val data = healthDataManager.fetchHealthMetricsForPeriod(period)
+                _detailedData.value = data
+            } catch (e: Exception) {
+                _connectionStatus.value = "Failed to load detailed data"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
     fun getAvailableWearables(): List<WearableType> {
         return healthDataManager.getAvailableWearables()
     }
@@ -104,5 +164,21 @@ class HealthViewModel(context: Context) : ViewModel() {
     
     fun clearConnectionStatus() {
         _connectionStatus.value = ""
+    }
+    
+    fun generateDummyDataForAllUsers() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _connectionStatus.value = "Generating dummy data for all users..."
+                healthDataManager.generateDummyDataForAllUsers()
+                _connectionStatus.value = "Dummy data generated successfully"
+                loadHealthSummaries()
+            } catch (e: Exception) {
+                _connectionStatus.value = "Failed to generate dummy data: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 }
