@@ -50,6 +50,24 @@ class SocialViewModel(
     private val _firestoreFollowingUsers = MutableStateFlow<List<Map<String, Any>>>(emptyList())
     val firestoreFollowingUsers: StateFlow<List<Map<String, Any>>> = _firestoreFollowingUsers.asStateFlow()
     
+    // Temporary storage for follower user data when navigating to profile
+    private val _temporaryFollowerUser = MutableStateFlow<Map<String, Any>?>(null)
+    val temporaryFollowerUser: StateFlow<Map<String, Any>?> = _temporaryFollowerUser.asStateFlow()
+    
+    /**
+     * Set temporary follower user data for navigation
+     */
+    fun setTemporaryFollowerUser(userData: Map<String, Any>) {
+        _temporaryFollowerUser.value = userData
+    }
+    
+    /**
+     * Clear temporary follower user data
+     */
+    fun clearTemporaryFollowerUser() {
+        _temporaryFollowerUser.value = null
+    }
+    
     /**
      * Search users in Firestore by fullName only
      */

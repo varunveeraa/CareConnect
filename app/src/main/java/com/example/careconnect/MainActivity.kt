@@ -22,7 +22,9 @@ import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
+import com.example.careconnect.util.HealthDataInitializer
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +44,14 @@ fun CareConnectApp() {
     val authState by authViewModel.authState.collectAsState()
     val firebaseAuth = FirebaseAuth.getInstance()
     val currentUser = firebaseAuth.currentUser
+    val context = LocalContext.current
+
+    // Initialize health data when app starts and user is authenticated
+    LaunchedEffect(authState) {
+        if (authState is FirebaseAuthState.Authenticated) {
+            HealthDataInitializer.initializeHealthDataIfNeeded(context)
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (authState) {
@@ -56,7 +66,7 @@ fun CareConnectApp() {
             }
             is FirebaseAuthState.Authenticated -> {
                 // User is signed in and onboarded, show main app with navigation
-                val database = AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current)
+                val database = AppDatabase.getDatabase(context)
                 
                 val socialRepository = SocialRepository(
                     userDao = database.userDao(),
