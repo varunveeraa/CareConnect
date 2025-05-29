@@ -1,11 +1,29 @@
-package com.example.careconnect.screens
+package screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.screens.ForgotPasswordDialog
+import com.example.careconnect.viewmodel.FirebaseAuthViewModel
+import com.example.careconnect.viewmodel.FirebaseAuthState
 
 
 @Composable
@@ -17,7 +35,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
     var showForgotPassword by remember { mutableStateOf(false) }
-
+    var passwordVisible by remember { mutableStateOf(false) }
     val authState by authViewModel.authState.collectAsState()
     val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
     val isLoading = authState is FirebaseAuthState.Loading
@@ -53,17 +71,27 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Password", modifier = Modifier.align(Alignment.Start))
+
         OutlinedTextField(
             value = password,
-            onValueChange = { 
+            onValueChange = {
                 password = it
                 authViewModel.resetAuthError()
             },
-            visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                val icon = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                val desc = if (passwordVisible) "Hide password" else "Show password"
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(imageVector = icon, contentDescription = desc, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp))
+                }
+            }
         )
+
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -94,14 +122,40 @@ fun LoginScreen(
             )
         }
 
-        // Show auth error
+        // Show auth error with improved messaging
         val currentAuthState = authState
         if (currentAuthState is FirebaseAuthState.Error) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = currentAuthState.message,
-                color = MaterialTheme.colorScheme.error
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = when {
+                        currentAuthState.message.contains("password", ignoreCase = true) ->
+                            "❌ Incorrect password. Please try again."
+
+                        currentAuthState.message.contains("user-not-found", ignoreCase = true) ->
+                            "❌ No account found with this email address."
+
+                        currentAuthState.message.contains("invalid-email", ignoreCase = true) ->
+                            "❌ Please enter a valid email address."
+
+                        currentAuthState.message.contains("too-many-requests", ignoreCase = true) ->
+                            "⏳ Too many failed attempts. Please try again later."
+
+                        currentAuthState.message.contains("network", ignoreCase = true) ->
+                            "🌐 Network error. Please check your connection."
+
+                        else -> "❌ ${currentAuthState.message}"
+                    },
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 14.sp
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
