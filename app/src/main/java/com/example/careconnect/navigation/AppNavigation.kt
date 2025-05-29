@@ -1,17 +1,21 @@
 package com.example.careconnect.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Modifier
 import com.example.careconnect.database.User
-import com.example.careconnect.viewmodel.SocialViewModel
-import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.screens.*
+import com.example.careconnect.viewmodel.FirebaseAuthViewModel
+import com.example.careconnect.viewmodel.SocialViewModel
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
@@ -27,6 +31,9 @@ sealed class Screen(val route: String) {
     }
     object FirestoreUserProfile : Screen("firestore_user_profile/{uid}") {
         fun createRoute(uid: String) = "firestore_user_profile/$uid"
+    }
+    object FollowerProfile : Screen("follower_profile/{uid}") {
+        fun createRoute(uid: String) = "follower_profile/$uid"
     }
 }
 
@@ -68,6 +75,13 @@ fun AppNavigation(
                 },
                 onActualUserClick = { actualUser ->
                     navController.navigate(Screen.FirestoreUserProfile.createRoute(actualUser.uid))
+                },
+                onFollowerUserClick = { userData ->
+                    val uid = userData["uid"]?.toString() ?: ""
+                    if (uid.isNotEmpty()) {
+                        socialViewModel.setTemporaryFollowerUser(userData)
+                        navController.navigate(Screen.FollowerProfile.createRoute(uid))
+                    }
                 },
                 onNavigateToRequests = {
                     navController.navigate(Screen.FollowRequests.route)
@@ -155,6 +169,64 @@ fun AppNavigation(
                             navController.popBackStack()
                         }
                     )
+                }
+            }
+        }
+        
+        composable(Screen.FollowerProfile.route) { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("uid") ?: ""
+            val followerUser by socialViewModel.temporaryFollowerUser.collectAsState()
+            
+            if (followerUser != null) {
+                FollowerUserProfileScreen(
+                    userData = followerUser!!,
+                    currentUser = currentUser,
+                    socialViewModel = socialViewModel,
+                    onNavigateBack = {
+                        socialViewModel.clearTemporaryFollowerUser()
+                        navController.popBackStack()
+                    }
+                )
+            } else {
+                // Fallback to existing logic if user data is not available
+                LaunchedEffect(uid) {
+                    socialViewModel.getActualUserByUid(uid)
+                    socialViewModel.getFirestoreUserByUid(uid)
+                }
+                
+                val actualUser by socialViewModel.selectedActualUser.collectAsState()
+                val firestoreUser by socialViewModel.selectedFirestoreUser.collectAsState()
+                
+                when {
+                    actualUser != null -> {
+                        ActualUserProfileScreen(
+                            actualUser = actualUser!!,
+                            currentUser = currentUser,
+                            socialViewModel = socialViewModel,
+                            onNavigateBack = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    firestoreUser != null -> {
+                        FirestoreUserProfileScreen(
+                            firestoreUser = firestoreUser!!,
+                            currentUser = currentUser,
+                            socialViewModel = socialViewModel,
+                            onNavigateBack = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    else -> {
+                        // Show loading or error state
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
             }
         }

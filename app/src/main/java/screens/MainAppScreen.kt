@@ -32,12 +32,11 @@ fun MainAppScreen(
     val currentRoute = navBackStackEntry?.destination?.route
 
     val bottomNavItems = listOf(
-        BottomNavItem(Screen.Browse.route, Icons.Default.Search, "BROWSE"),
-        BottomNavItem(Screen.Patterns.route, Icons.Default.BarChart, "PATTERNS"),
         BottomNavItem(Screen.Home.route, Icons.Default.Home, "HOME"),
-        BottomNavItem(Screen.People.route, Icons.Default.People, "PEOPLE"),
+        BottomNavItem(Screen.Browse.route, Icons.Default.Build, "TOOLS"),
         BottomNavItem(Screen.Chat.route, Icons.AutoMirrored.Filled.Chat, "CHAT"),
-        BottomNavItem(Screen.Settings.route, Icons.Default.Settings, "SETTINGS")
+        BottomNavItem(Screen.People.route, Icons.Default.People, "PEOPLE"),
+        BottomNavItem(Screen.Settings.route, Icons.Default.Person, "ACCOUNT")
     )
 
     Scaffold(

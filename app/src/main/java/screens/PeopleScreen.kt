@@ -82,11 +82,6 @@ fun RawUserItem(
                     text = rawUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = rawUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (rawUser.focusAreas.isNotEmpty()) {
                     Text(
                         text = "Focus: ${rawUser.focusAreas.joinToString(", ")}",
@@ -150,6 +145,9 @@ fun PeopleScreen(
     onActualUserClick: (ActualUser) -> Unit = {},
     onRawUserClick: (SocialViewModel.RawFirestoreUser) -> Unit = { rawUser ->
         android.util.Log.d("PeopleScreen", "Raw user clicked: ${rawUser.fullName}")
+    },
+    onFollowerUserClick: (Map<String, Any>) -> Unit = { userData ->
+        android.util.Log.d("PeopleScreen", "Follower user clicked: ${userData["fullName"]}")
     },
     onNavigateToRequests: () -> Unit,
     onNavigateToFirestoreRequests: () -> Unit
@@ -271,17 +269,13 @@ fun PeopleScreen(
                     "following" -> {
                         LocalizedFollowingContent(
                             followingUsers = firestoreFollowing,
-                            onUserClick = { userData ->
-                                android.util.Log.d("PeopleScreen", "Clicked on following: ${userData["fullName"]}")
-                            }
+                            onUserClick = onFollowerUserClick
                         )
                     }
                     "followers" -> {
                         LocalizedFollowersContent(
                             followerUsers = firestoreFollowers,
-                            onUserClick = { userData ->
-                                android.util.Log.d("PeopleScreen", "Clicked on follower: ${userData["fullName"]}")
-                            }
+                            onUserClick = onFollowerUserClick
                         )
                     }
                 }
@@ -570,11 +564,6 @@ fun FirestoreUserItem(
                     text = firestoreUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = firestoreUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (!firestoreUser.focusArea.isNullOrBlank()) {
                     Text(
                         text = "Focus: ${firestoreUser.focusArea}",
@@ -584,11 +573,8 @@ fun FirestoreUserItem(
                 }
             }
 
-            // Follow button (simplified for Firestore users)
             Button(
                 onClick = {
-                    // For now, just show that it would send a follow request
-                    // In a real app, you'd need to map Firestore UID to local user ID
                 }
             ) {
                 Text("Connect")
@@ -637,11 +623,6 @@ fun ActualUserItem(
                     text = actualUser.fullName,
                     fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = actualUser.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
                 if (actualUser.focusAreas.isNotEmpty()) {
                     Text(
                         text = "Focus: ${actualUser.focusAreas.joinToString(", ")}",
@@ -651,11 +632,8 @@ fun ActualUserItem(
                 }
             }
 
-            // Follow button (simplified for Firestore users)
             Button(
                 onClick = {
-                    // For now, just show that it would send a follow request
-                    // In a real app, you'd need to map Firestore UID to local user ID
                 }
             ) {
                 Text("Connect")
@@ -712,11 +690,6 @@ fun UserItem(
                 Text(
                     text = user.fullName,
                     fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = user.email,
-                    fontSize = 12.sp,
-                    color = Color.Gray
                 )
                 if (!user.focusArea.isNullOrBlank()) {
                     Text(
@@ -904,5 +877,259 @@ fun LocalizedFollowingContent(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FollowerUserProfileScreen(
+    userData: Map<String, Any>,
+    currentUser: User,
+    socialViewModel: SocialViewModel,
+    onNavigateBack: () -> Unit
+) {
+    val fullName = userData["fullName"]?.toString() ?: "Unknown User"
+    val email = userData["email"]?.toString() ?: ""
+    val uid = userData["uid"]?.toString() ?: ""
+    val focusAreas = userData["focusAreas"] as? List<String> ?: emptyList()
+    val healthConditions = userData["healthConditions"] as? List<String> ?: emptyList()
+    val dateOfBirth = userData["dateOfBirth"]?.toString() ?: ""
+    val gender = userData["gender"]?.toString() ?: ""
+    val onboardingCompleted = userData["onboardingCompleted"] as? Boolean ?: false
+    val followers = userData["followers"] as? List<String> ?: emptyList()
+    val following = userData["following"] as? List<String> ?: emptyList()
+
+    var isFollowing by remember { mutableStateOf(false) }
+    var followRequestStatus by remember { mutableStateOf<String?>(null) }
+    
+    val firebaseAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val currentUserUid = firebaseAuth.currentUser?.uid ?: currentUser.email
+    
+    // Check current follow status
+    LaunchedEffect(uid) {
+        if (uid.isNotEmpty()) {
+            isFollowing = socialViewModel.isFollowingInFirestore(currentUserUid, uid)
+            val request = socialViewModel.getFirestoreRequestBetweenUsers(currentUserUid, uid)
+            followRequestStatus = request?.status
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Profile") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Profile picture
+            Surface(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = fullName.firstOrNull()?.toString() ?: "?",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 48.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Name and basic info
+            Text(
+                text = fullName,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            
+            if (email.isNotEmpty()) {
+                Text(
+                    text = email,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Stats
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(32.dp)
+            ) {
+                FollowerStatCard(
+                    count = followers.size,
+                    label = "Followers"
+                )
+                FollowerStatCard(
+                    count = following.size,
+                    label = "Following"
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Follow/Unfollow button
+            if (uid != currentUserUid && uid.isNotEmpty()) {
+                when {
+                    isFollowing -> {
+                        Button(
+                            onClick = {
+                                socialViewModel.unfollowInFirestore(currentUserUid, uid)
+                                isFollowing = false
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Following")
+                        }
+                    }
+                    followRequestStatus == "pending" -> {
+                        Button(
+                            onClick = { /* Already sent */ },
+                            enabled = false,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Requested")
+                        }
+                    }
+                    else -> {
+                        Button(
+                            onClick = {
+                                // Create a RawFirestoreUser object for the follow request
+                                val rawUser = SocialViewModel.RawFirestoreUser(
+                                    uid = uid,
+                                    fullName = fullName,
+                                    email = email,
+                                    focusAreas = focusAreas,
+                                    healthConditions = healthConditions,
+                                    dateOfBirth = dateOfBirth,
+                                    gender = gender,
+                                    onboardingCompleted = onboardingCompleted
+                                )
+                                socialViewModel.sendFollowRequestToFirestoreUser(
+                                    fromUserUid = currentUserUid,
+                                    fromUserName = currentUser.fullName,
+                                    firestoreUser = rawUser
+                                )
+                                followRequestStatus = "pending"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Follow")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            // Focus Areas
+            if (focusAreas.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Focus Areas",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = focusAreas.joinToString(", "))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Health Conditions
+            if (healthConditions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Health Conditions",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = healthConditions.joinToString(", "))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Additional info
+            if (dateOfBirth.isNotEmpty() || gender.isNotEmpty() || onboardingCompleted) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Additional Information",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (dateOfBirth.isNotEmpty()) {
+                            Text("Date of Birth: $dateOfBirth")
+                        }
+                        if (gender.isNotEmpty()) {
+                            Text("Gender: $gender")
+                        }
+                        if (onboardingCompleted) {
+                            Text("✓ Onboarding completed", color = Color.Green)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FollowerStatCard(count: Int, label: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = count.toString(),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.Gray
+        )
     }
 }
