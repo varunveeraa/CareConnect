@@ -405,9 +405,10 @@ fun ChatBubble(message: ChatMessage, currentUser: User) {
                     .widthIn(max = 240.dp)
             ) {
                 Text(
-                    text = message.content,
+                    text = message.content.trim(),
                     fontSize = 13.sp,
-                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 16.sp
                 )
             }
             
