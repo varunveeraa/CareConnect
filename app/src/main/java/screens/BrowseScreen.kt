@@ -134,46 +134,38 @@ fun MetricsSummaryCards(healthData: List<DailyHealthData>) {
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 8.dp)
         )
-        
+
+        // Single box containing all four items in one row
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.LightGray, RoundedCornerShape(8.dp))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             DashboardCard(
                 title = "Heart Rate",
                 value = avgHeartRate.toString(),
                 icon = Icons.Default.Favorite,
-                iconColor = Color.Red,
-                modifier = Modifier.weight(1f)
+                iconColor = Color.Red
             )
             DashboardCard(
                 title = "Sleep Hours",
                 value = "${String.format("%.1f", avgSleep)}h",
                 icon = Icons.Default.Nightlight,
-                iconColor = Color.Gray,
-                modifier = Modifier.weight(1f)
+                iconColor = Color.Gray
             )
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
             DashboardCard(
                 title = "Step Count",
                 value = avgSteps.toString(),
                 icon = Icons.Default.DirectionsRun,
-                iconColor = Color.Blue,
-                modifier = Modifier.weight(1f)
+                iconColor = Color.Blue
             )
             DashboardCard(
                 title = "Calories",
                 value = avgCalories.toString(),
                 icon = Icons.Default.LocalFireDepartment,
-                iconColor = Color(0xFF9C27B0), // Purple color
-                modifier = Modifier.weight(1f)
+                iconColor = Color(0xFF9C27B0) // Purple color
             )
         }
     }
@@ -184,36 +176,44 @@ fun DashboardCard(
     title: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconColor: Color,
-    modifier: Modifier = Modifier
+    iconColor: Color
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color.White,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .size(width = 70.dp, height = 70.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = title,
-                modifier = Modifier.size(24.dp),
-                tint = iconColor
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Text(
-                title,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = value,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = title,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF1A1A1A) // Darker, more attractive color
+        )
     }
 }
 
