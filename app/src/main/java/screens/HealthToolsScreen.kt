@@ -160,12 +160,13 @@ fun HealthSummaryCard(
                 ) {
                     Text(
                         text = "Detailed View",
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.CenterVertically)
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(16.dp))
             
             if (summary != null && summary.totalDays > 0) {
                 Row(
@@ -187,8 +188,8 @@ fun HealthSummaryCard(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                
-                Spacer(modifier = Modifier.height(8.dp))
+
+                Spacer(modifier = Modifier.height(12.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
