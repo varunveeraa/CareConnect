@@ -129,7 +129,7 @@ fun MetricsSummaryCards(healthData: List<DailyHealthData>) {
     
     Column {
         Text(
-            "Summary",
+            "Dashboard",
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -139,16 +139,18 @@ fun MetricsSummaryCards(healthData: List<DailyHealthData>) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SummaryCard(
-                title = "Avg Steps",
-                value = avgSteps.toString(),
-                icon = Icons.Default.DirectionsWalk,
-                modifier = Modifier.weight(1f)
-            )
-            SummaryCard(
-                title = "Avg BPM",
+            DashboardCard(
+                title = "Heart Rate",
                 value = avgHeartRate.toString(),
                 icon = Icons.Default.Favorite,
+                iconColor = Color.Red,
+                modifier = Modifier.weight(1f)
+            )
+            DashboardCard(
+                title = "Sleep Hours",
+                value = "${String.format("%.1f", avgSleep)}h",
+                icon = Icons.Default.Nightlight,
+                iconColor = Color.Gray,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -159,16 +161,18 @@ fun MetricsSummaryCards(healthData: List<DailyHealthData>) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SummaryCard(
-                title = "Avg Sleep",
-                value = "${String.format("%.1f", avgSleep)}h",
-                icon = Icons.Default.Bedtime,
+            DashboardCard(
+                title = "Step Count",
+                value = avgSteps.toString(),
+                icon = Icons.Default.DirectionsRun,
+                iconColor = Color.Blue,
                 modifier = Modifier.weight(1f)
             )
-            SummaryCard(
-                title = "Avg Calories",
+            DashboardCard(
+                title = "Calories",
                 value = avgCalories.toString(),
                 icon = Icons.Default.LocalFireDepartment,
+                iconColor = Color(0xFF9C27B0), // Purple color
                 modifier = Modifier.weight(1f)
             )
         }
@@ -176,10 +180,11 @@ fun MetricsSummaryCards(healthData: List<DailyHealthData>) {
 }
 
 @Composable
-fun SummaryCard(
+fun DashboardCard(
     title: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -194,9 +199,9 @@ fun SummaryCard(
                 icon,
                 contentDescription = title,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = iconColor
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 value,
                 fontSize = 20.sp,

@@ -30,6 +30,7 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // First row with Heart Rate and Sleep Hours
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -37,9 +38,42 @@ fun HomeScreen() {
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            MetricCard("70", "Heart Rate")
-            MetricCard("7", "Sleep Hours")
-            MetricCard("1000", "Step Count")
+            MetricCard(
+                value = "70",
+                label = "Heart Rate",
+                icon = Icons.Default.Favorite,
+                iconColor = Color.Red
+            )
+            MetricCard(
+                value = "7",
+                label = "Sleep Hours",
+                icon = Icons.Default.Nightlight,
+                iconColor = Color.Gray
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Second row with Step Count and Calories
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.LightGray, RoundedCornerShape(8.dp))
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            MetricCard(
+                value = "1000",
+                label = "Step Count",
+                icon = Icons.Default.DirectionsRun,
+                iconColor = Color.Blue
+            )
+            MetricCard(
+                value = "250",
+                label = "Calories",
+                icon = Icons.Default.LocalFireDepartment,
+                iconColor = Color(0xFF9C27B0) // Purple color
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -71,7 +105,12 @@ fun HomeScreen() {
 }
 
 @Composable
-fun MetricCard(value: String, label: String) {
+fun MetricCard(
+    value: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -80,12 +119,23 @@ fun MetricCard(value: String, label: String) {
             color = Color.White,
             shadowElevation = 4.dp,
             modifier = Modifier
-                .size(width = 60.dp, height = 60.dp),
+                .size(width = 80.dp, height = 80.dp),
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = iconColor,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = value,
-                    fontSize = 20.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
