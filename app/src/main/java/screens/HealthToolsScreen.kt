@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,11 +18,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.api.OverpassPlace
 import com.example.careconnect.viewmodel.HealthViewModel
+import com.example.careconnect.viewmodel.MapsViewModel
 import com.example.careconnect.health.HealthSummary
 import com.example.careconnect.health.MetricsPeriod
 import com.example.careconnect.health.DailyHealthData
+import com.example.careconnect.ui.maps.EmbeddedMapView
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -208,11 +213,7 @@ fun HealthToolsScreen(
                     expandedSection = if (expandedSection == "maps") null else "maps"
                 }
             ) {
-                Text(
-                    text = "Maps content coming soon",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                MapsContent()
             }
         }
     }
@@ -580,5 +581,447 @@ fun SmallMetricItem(
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
+    }
+}
+
+@Composable
+fun MapsContent() {
+    val context = LocalContext.current
+    val mapsViewModel: MapsViewModel = remember { MapsViewModel() }
+
+    val allPlaces by mapsViewModel.allPlaces.collectAsState()
+    val pharmacies by mapsViewModel.pharmacies.collectAsState()
+    val clinics by mapsViewModel.clinics.collectAsState()
+    val isLoading by mapsViewModel.isLoading.collectAsState()
+    val selectedPlaceType by mapsViewModel.selectedPlaceType.collectAsState()
+    val errorMessage by mapsViewModel.errorMessage.collectAsState()
+    val selectedMelbourneArea by mapsViewModel.selectedMelbourneArea.collectAsState()
+    val mapCenter by mapsViewModel.mapCenter.collectAsState()
+    val isGeocoding by mapsViewModel.isGeocoding.collectAsState()
+
+    // Melbourne default coordinates
+    val melbourneCoords = mapsViewModel.getMelbourneCoordinates()
+    var userLatitude by remember { mutableStateOf(melbourneCoords.first) }
+    var userLongitude by remember { mutableStateOf(melbourneCoords.second) }
+    var suburbSearchText by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .padding(bottom = 100.dp) // Extra padding to avoid bottom nav collision
+    ) {
+        // Location input section
+        Text(
+            text = "Find Healthcare in Melbourne",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp) // Reduced from 16dp
+        )
+
+        // Suburb search bar
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(8.dp) // Reduced from 12dp
+            ) {
+                Text(
+                    text = "Search Melbourne Suburbs",
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+
+                Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = suburbSearchText,
+                        onValueChange = { suburbSearchText = it },
+                        label = { Text("search suburb") },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isGeocoding && !isLoading
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = {
+                            if (suburbSearchText.isNotBlank()) {
+                                mapsViewModel.searchSuburb(suburbSearchText.trim())
+                            }
+                        },
+                        enabled = !isGeocoding && !isLoading && suburbSearchText.isNotBlank()
+                    ) {
+                        if (isGeocoding) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Search")
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Melbourne area quick selection
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(8.dp) // Reduced from 12dp
+            ) {
+                Text(
+                    text = "Quick Melbourne Areas",
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+
+                Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        OutlinedButton(
+                            onClick = {
+                                mapsViewModel.searchMelbourneCBD()
+                                userLatitude = -37.8136
+                                userLongitude = 144.9631
+                            },
+                            enabled = !isLoading && !isGeocoding
+                        ) {
+                            Text("CBD", fontSize = 12.sp)
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = {
+                                mapsViewModel.searchSouthYarra()
+                                userLatitude = -37.8394
+                                userLongitude = 144.9926
+                            },
+                            enabled = !isLoading && !isGeocoding
+                        ) {
+                            Text("South Yarra", fontSize = 12.sp)
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = {
+                                mapsViewModel.searchStKilda()
+                                userLatitude = -37.8676
+                                userLongitude = 144.9803
+                            },
+                            enabled = !isLoading && !isGeocoding
+                        ) {
+                            Text("St Kilda", fontSize = 12.sp)
+                        }
+                    }
+
+                    item {
+                        OutlinedButton(
+                            onClick = {
+                                mapsViewModel.searchRichmond()
+                                userLatitude = -37.8197
+                                userLongitude = 144.9917
+                            },
+                            enabled = !isLoading && !isGeocoding
+                        ) {
+                            Text("Richmond", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Embedded Map View (keeping full size)
+        EmbeddedMapView(
+            modifier = Modifier.fillMaxWidth(),
+            center = mapCenter,
+            places = allPlaces,
+            selectedPlaceType = selectedPlaceType,
+            onFullScreenClick = {
+                // TODO: Navigate to full screen map
+            }
+        )
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Show selected area
+        selectedMelbourneArea?.let { area ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "📍 Searching in: $area",
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { mapsViewModel.clearMelbourneArea() }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear area",
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+        }
+
+        // Manual coordinate input
+        Text(
+            text = "Or enter custom coordinates:",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            OutlinedTextField(
+                value = String.format("%.4f", userLatitude),
+                onValueChange = {
+                    userLatitude = it.toDoubleOrNull() ?: userLatitude
+                    mapsViewModel.clearMelbourneArea()
+                },
+                label = { Text("Latitude") },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                enabled = !isLoading && !isGeocoding
+            )
+
+            OutlinedTextField(
+                value = String.format("%.4f", userLongitude),
+                onValueChange = {
+                    userLongitude = it.toDoubleOrNull() ?: userLongitude
+                    mapsViewModel.clearMelbourneArea()
+                },
+                label = { Text("Longitude") },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp),
+                enabled = !isLoading && !isGeocoding
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Search button
+        Button(
+            onClick = { mapsViewModel.searchNearbyPlaces(userLatitude, userLongitude) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading && !isGeocoding
+        ) {
+            if (isLoading) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Searching...")
+                }
+            } else {
+                Text("Search Healthcare Near Location")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Place type selector
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FilterChip(
+                onClick = { mapsViewModel.setSelectedPlaceType("all") },
+                label = { Text("All (${allPlaces.size})") },
+                selected = selectedPlaceType == "all"
+            )
+
+            FilterChip(
+                onClick = { mapsViewModel.setSelectedPlaceType("pharmacy") },
+                label = { Text("Pharmacies (${pharmacies.size})") },
+                selected = selectedPlaceType == "pharmacy"
+            )
+
+            FilterChip(
+                onClick = { mapsViewModel.setSelectedPlaceType("clinic") },
+                label = { Text("Clinics (${clinics.size})") },
+                selected = selectedPlaceType == "clinic"
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
+
+        // Error message
+        errorMessage?.let { error ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { mapsViewModel.clearError() }) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Clear error",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+        }
+
+        // Results
+        val currentPlaces = mapsViewModel.getCurrentPlaces()
+
+        if (currentPlaces.isNotEmpty()) {
+            // Summary info
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Text(
+                    text = "Found ${currentPlaces.size} ${if (selectedPlaceType == "all") "healthcare places" else selectedPlaceType} nearby" +
+                            (selectedMelbourneArea?.let { " in $it" } ?: ""),
+                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp) // Reduced from 8dp
+            ) {
+                items(currentPlaces) { place ->
+                    OverpassPlaceItem(place = place)
+                }
+            }
+        } else if (!isLoading && !isGeocoding && errorMessage == null) {
+            Text(
+                text = "No ${selectedPlaceType} found nearby.\nTry selecting a different Melbourne area or adjusting coordinates.",
+                modifier = Modifier.padding(8.dp), // Reduced from 16dp
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun OverpassPlaceItem(place: OverpassPlace) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = place.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    Text(
+                        text = place.amenity.replaceFirstChar { it.uppercase() },
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                // Distance could be calculated here
+                Text(
+                    text = "${String.format("%.4f", place.lat)}, ${
+                        String.format(
+                            "%.4f",
+                            place.lon
+                        )
+                    }",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            place.address?.let { address ->
+                Text(
+                    text = address,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            place.phone?.let { phone ->
+                Text(
+                    text = "📞 $phone",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+
+            place.openingHours?.let { hours ->
+                Text(
+                    text = "🕒 $hours",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
     }
 }
