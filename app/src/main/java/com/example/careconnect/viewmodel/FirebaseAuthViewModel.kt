@@ -102,6 +102,7 @@ class FirebaseAuthViewModel(application: Application) : AndroidViewModel(applica
     fun login(email: String, password: String) {
         viewModelScope.launch {
             try {
+                _authState.value = FirebaseAuthState.Loading
                 val result = auth.signInWithEmailAndPassword(email, password).await()
                 val user = result.user
                 
@@ -128,7 +129,15 @@ class FirebaseAuthViewModel(application: Application) : AndroidViewModel(applica
                     _authState.value = FirebaseAuthState.Error("Login failed")
                 }
             } catch (e: Exception) {
-                _authState.value = FirebaseAuthState.Error(e.message ?: "Login failed")
+                val errorMessage = when {
+                    e.message?.contains("There is no user record") == true -> "No account found with this email address"
+                    e.message?.contains("The password is invalid") == true -> "Incorrect password"
+                    e.message?.contains("The email address is badly formatted") == true -> "Invalid email format"
+                    e.message?.contains("A network error") == true -> "Network error. Please check your connection"
+                    e.message?.contains("Too many unsuccessful login attempts") == true -> "Too many failed attempts. Please try again later"
+                    else -> "Incorrect email or password"
+                }
+                _authState.value = FirebaseAuthState.Error(errorMessage)
             }
         }
     }

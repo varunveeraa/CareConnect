@@ -168,9 +168,68 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
     var gender by remember { mutableStateOf("") }
     var genderExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    
+
+    // Error states
+    var fullNameError by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf("") }
+    var confirmPasswordError by remember { mutableStateOf("") }
+    var dateError by remember { mutableStateOf("") }
+    var genderError by remember { mutableStateOf("") }
+
     val signUpState by authViewModel.signUpState.collectAsState()
     val genderOptions = listOf("Male", "Female", "Other")
+
+    // Function to validate fields
+    fun validateFields(): Boolean {
+        var isValid = true
+
+        // Reset all errors
+        fullNameError = ""
+        emailError = ""
+        passwordError = ""
+        confirmPasswordError = ""
+        dateError = ""
+        genderError = ""
+
+        if (fullName.isBlank()) {
+            fullNameError = "Full name is required"
+            isValid = false
+        }
+
+        if (email.isBlank()) {
+            emailError = "Email is required"
+            isValid = false
+        }
+
+        if (password.isBlank()) {
+            passwordError = "Password is required"
+            isValid = false
+        } else if (password.length < 6) {
+            passwordError = "Password must be at least 6 characters"
+            isValid = false
+        }
+
+        if (confirmPassword.isBlank()) {
+            confirmPasswordError = "Please confirm your password"
+            isValid = false
+        } else if (password != confirmPassword) {
+            confirmPasswordError = "Passwords do not match"
+            isValid = false
+        }
+
+        if (selectedDate == null) {
+            dateError = "Date of birth is required"
+            isValid = false
+        }
+
+        if (gender.isBlank()) {
+            genderError = "Gender is required"
+            isValid = false
+        }
+
+        return isValid
+    }
 
     Column(
         modifier = Modifier
@@ -186,21 +245,49 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
 
         OutlinedTextField(
             value = fullName,
-            onValueChange = { fullName = it },
+            onValueChange = {
+                fullName = it
+                if (fullNameError.isNotEmpty()) fullNameError = ""
+            },
             label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            isError = fullNameError.isNotEmpty()
         )
+        if (fullNameError.isNotEmpty()) {
+            Text(
+                text = fullNameError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it },
+            onValueChange = {
+                email = it
+                if (emailError.isNotEmpty()) emailError = ""
+            },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            isError = emailError.isNotEmpty()
         )
+        if (emailError.isNotEmpty()) {
+            Text(
+                text = emailError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -215,12 +302,26 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             modifier = Modifier
                 .fillMaxWidth(),
             trailingIcon = {
-                TextButton(onClick = { showDatePicker = true }) {
+                TextButton(onClick = {
+                    showDatePicker = true
+                    if (dateError.isNotEmpty()) dateError = ""
+                }) {
                     Text("Select")
                 }
             },
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            isError = dateError.isNotEmpty()
         )
+        if (dateError.isNotEmpty()) {
+            Text(
+                text = dateError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -238,7 +339,8 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                     .fillMaxWidth()
                     .menuAnchor(),
                 enabled = signUpState !is FirebaseSignUpState.Loading,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) }
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
+                isError = genderError.isNotEmpty()
             )
             ExposedDropdownMenu(
                 expanded = genderExpanded,
@@ -250,37 +352,76 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                         onClick = {
                             gender = option
                             genderExpanded = false
+                            if (genderError.isNotEmpty()) genderError = ""
                         }
                     )
                 }
             }
+        }
+        if (genderError.isNotEmpty()) {
+            Text(
+                text = genderError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                if (passwordError.isNotEmpty()) passwordError = ""
+            },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            isError = passwordError.isNotEmpty()
         )
+        if (passwordError.isNotEmpty()) {
+            Text(
+                text = passwordError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it },
+            onValueChange = {
+                confirmPassword = it
+                if (confirmPasswordError.isNotEmpty()) confirmPasswordError = ""
+            },
             label = { Text("Confirm Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            isError = confirmPasswordError.isNotEmpty()
         )
+        if (confirmPasswordError.isNotEmpty()) {
+            Text(
+                text = confirmPasswordError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 4.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
-        
-        // Error message
+
+        // Error message from Firebase
         val currentSignUpState = signUpState
         if (currentSignUpState is FirebaseSignUpState.Error) {
             Text(
@@ -292,26 +433,17 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
         
         Button(
             onClick = {
-                when {
-                    fullName.isBlank() -> return@Button
-                    email.isBlank() -> return@Button
-                    password.isBlank() -> return@Button
-                    confirmPassword.isBlank() -> return@Button
-                    selectedDate == null -> return@Button
-                    gender.isBlank() -> return@Button
-                    password != confirmPassword -> return@Button
-                    else -> {
-                        val dobString = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                            .format(Date(selectedDate!!))
-                        
-                        authViewModel.signUp(
-                            fullName = fullName,
-                            email = email,
-                            password = password,
-                            dateOfBirth = dobString,
-                            gender = gender
-                        )
-                    }
+                if (validateFields()) {
+                    val dobString = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        .format(Date(selectedDate!!))
+
+                    authViewModel.signUp(
+                        fullName = fullName,
+                        email = email,
+                        password = password,
+                        dateOfBirth = dobString,
+                        gender = gender
+                    )
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -331,6 +463,7 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             onDateSelected = { dateInMillis ->
                 selectedDate = dateInMillis
                 showDatePicker = false
+                if (dateError.isNotEmpty()) dateError = ""
             },
             onDismiss = { showDatePicker = false }
         )
