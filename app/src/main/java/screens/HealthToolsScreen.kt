@@ -1,5 +1,7 @@
 package com.example.careconnect.screens
 
+import android.app.Application
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -42,7 +44,7 @@ fun HealthToolsScreen(
     val context = LocalContext.current
     val healthViewModel: HealthViewModel = remember { HealthViewModel(context) }
     val locationViewModel: LocationViewModel = viewModel()
-    val reminderViewModel: ReminderViewModel = viewModel()
+    val reminderViewModel: ReminderViewModel = viewModel { ReminderViewModel(context.applicationContext as Application) }
     
     val dailySummary by healthViewModel.dailySummary.collectAsState()
     val weeklySummary by healthViewModel.weeklySummary.collectAsState()
@@ -174,28 +176,10 @@ fun HealthToolsScreen(
                 }
                 
                 item {
-                    HealthSummaryCard(
-                        title = "Daily Summary",
-                        summary = dailySummary,
-                        period = MetricsPeriod.DAILY,
-                        onDetailedViewClick = onNavigateToDetailedView
-                    )
-                }
-                
-                item {
-                    HealthSummaryCard(
-                        title = "Weekly Summary",
-                        summary = weeklySummary,
-                        period = MetricsPeriod.WEEKLY,
-                        onDetailedViewClick = onNavigateToDetailedView
-                    )
-                }
-                
-                item {
-                    HealthSummaryCard(
-                        title = "Monthly Summary",
-                        summary = monthlySummary,
-                        period = MetricsPeriod.MONTHLY,
+                    UnifiedHealthSummaryCard(
+                        dailySummary = dailySummary,
+                        weeklySummary = weeklySummary,
+                        monthlySummary = monthlySummary,
                         onDetailedViewClick = onNavigateToDetailedView
                     )
                 }
@@ -209,6 +193,7 @@ fun RemindersSummaryCard(
     reminders: List<SchedulingReminder>,
     onNavigateToManage: () -> Unit
 ) {
+    val context = LocalContext.current
     val activeReminders = reminders.filter { reminder ->
         try {
             val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -218,6 +203,14 @@ fun RemindersSummaryCard(
         } catch (e: Exception) {
             false
         }
+    }
+    
+    // Check notification permission
+    val hasNotificationPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == 
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    } else {
+        true
     }
     
     Card(
@@ -239,19 +232,28 @@ fun RemindersSummaryCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Default.Notifications,
+                        if (hasNotificationPermission) Icons.Default.Notifications else Icons.Default.NotificationsOff,
                         contentDescription = "Reminders",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = if (hasNotificationPermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(24.dp)
                     )
                     
                     Spacer(modifier = Modifier.width(8.dp))
                     
-                    Text(
-                        text = "Reminders",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Reminders",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (!hasNotificationPermission) {
+                            Text(
+                                text = "Notifications disabled",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
                 
                 OutlinedButton(
@@ -859,6 +861,158 @@ fun TimePickerDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun UnifiedHealthSummaryCard(
+    dailySummary: HealthSummary?,
+    weeklySummary: HealthSummary?,
+    monthlySummary: HealthSummary?,
+    onDetailedViewClick: (MetricsPeriod) -> Unit
+) {
+    var selectedPeriod by remember { mutableStateOf(MetricsPeriod.DAILY) }
+    val currentSummary = when (selectedPeriod) {
+        MetricsPeriod.DAILY -> dailySummary
+        MetricsPeriod.WEEKLY -> weeklySummary
+        MetricsPeriod.MONTHLY -> monthlySummary
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Health Summary",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                OutlinedButton(
+                    onClick = { onDetailedViewClick(selectedPeriod) },
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(
+                        text = "Detailed View",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                PeriodButton(
+                    period = MetricsPeriod.DAILY,
+                    isSelected = selectedPeriod == MetricsPeriod.DAILY,
+                    onClick = { selectedPeriod = MetricsPeriod.DAILY }
+                )
+                
+                PeriodButton(
+                    period = MetricsPeriod.WEEKLY,
+                    isSelected = selectedPeriod == MetricsPeriod.WEEKLY,
+                    onClick = { selectedPeriod = MetricsPeriod.WEEKLY }
+                )
+                
+                PeriodButton(
+                    period = MetricsPeriod.MONTHLY,
+                    isSelected = selectedPeriod == MetricsPeriod.MONTHLY,
+                    onClick = { selectedPeriod = MetricsPeriod.MONTHLY }
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (currentSummary != null && currentSummary.totalDays > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    MetricItem(
+                        title = "Steps",
+                        value = "${currentSummary.avgStepCount}",
+                        icon = Icons.Default.DirectionsWalk,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    MetricItem(
+                        title = "Heart Rate",
+                        value = "${currentSummary.avgHeartRate.roundToInt()}",
+                        unit = "bpm",
+                        icon = Icons.Default.Favorite,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    MetricItem(
+                        title = "Sleep",
+                        value = "${(currentSummary.avgSleepHours * 10).roundToInt() / 10.0}",
+                        unit = "hrs",
+                        icon = Icons.Default.Bedtime,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    
+                    MetricItem(
+                        title = "Calories",
+                        value = "${currentSummary.avgCalories.roundToInt()}",
+                        unit = "kcal",
+                        icon = Icons.Default.LocalFireDepartment,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Based on ${currentSummary.totalDays} day${if (currentSummary.totalDays != 1) "s" else ""} of data",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                Text(
+                    text = "No data available",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeriodButton(
+    period: MetricsPeriod,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        modifier = Modifier.width(100.dp)
+    ) {
+        Text(period.displayName)
     }
 }
 

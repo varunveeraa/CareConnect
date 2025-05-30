@@ -22,11 +22,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.User
 import com.example.careconnect.firestore.ChatMessage
 import com.example.careconnect.firestore.ChatSession
 import com.example.careconnect.viewmodel.ChatViewModel
+import com.example.careconnect.viewmodel.ChatViewModelFactory
 import com.example.careconnect.util.ChatDataFixer
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -35,9 +37,13 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    currentUser: User,
-    chatViewModel: ChatViewModel = viewModel()
+    currentUser: User
 ) {
+    val context = LocalContext.current
+    val chatViewModel: ChatViewModel = viewModel(
+        factory = ChatViewModelFactory(context)
+    )
+    
     var messageText by remember { mutableStateOf("") }
     var showChatHistory by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

@@ -1,5 +1,11 @@
 package com.example.careconnect.screens
 
+import android.Manifest
+import android.app.Application
+import android.content.Context
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,27 +18,58 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.viewmodel.ReminderViewModel
 import com.example.careconnect.firestore.SchedulingReminder
 import java.text.SimpleDateFormat
 import java.util.*
+import android.util.Log
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageRemindersScreen(
     onNavigateBack: () -> Unit
 ) {
-    val reminderViewModel: ReminderViewModel = viewModel()
+    val context = LocalContext.current
+    val reminderViewModel: ReminderViewModel = viewModel {
+        ReminderViewModel(context.applicationContext as Application)
+    }
     val reminders by reminderViewModel.reminders.collectAsState()
     val isLoading by reminderViewModel.isLoading.collectAsState()
     val message by reminderViewModel.message.collectAsState()
+    val hasNotificationPermission by reminderViewModel.hasNotificationPermission.collectAsState()
+    val hasExactAlarmPermission by reminderViewModel.hasExactAlarmPermission.collectAsState()
     
     var showAddReminderForm by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    
+    // Permission launcher for notifications
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            reminderViewModel.checkPermissions()
+            reminderViewModel.rescheduleAllNotifications()
+        }
+    }
+    
+    // Check permissions when the screen loads
+    LaunchedEffect(Unit) {
+        reminderViewModel.checkPermissions()
+        if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            showPermissionDialog = true
+        }
+    }
     
     // Debug info
     LaunchedEffect(reminders) {
@@ -120,6 +157,89 @@ fun ManageRemindersScreen(
                         MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.onErrorContainer
                 )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        
+        // Notification status card
+        if (!hasNotificationPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.NotificationsOff,
+                            contentDescription = "Notifications Disabled",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Notifications Disabled",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Enable notifications to receive reminder alerts",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Enable Notifications")
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        } else if (hasNotificationPermission) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "Notifications Enabled",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Notifications Enabled",
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (!hasExactAlarmPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = "Exact Alarm Warning",
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }

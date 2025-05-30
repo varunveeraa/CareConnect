@@ -1,5 +1,6 @@
 package com.example.careconnect.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.careconnect.firestore.ChatMessage
@@ -11,8 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ChatViewModel : ViewModel() {
-    private val chatRepository = ChatRepository()
+class ChatViewModel(
+    private val context: Context? = null
+) : ViewModel() {
+    private val chatRepository = ChatRepository(context)
     
     private val _chatSessions = MutableStateFlow<List<ChatSession>>(emptyList())
     val chatSessions: StateFlow<List<ChatSession>> = _chatSessions.asStateFlow()
