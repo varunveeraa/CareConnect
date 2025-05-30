@@ -1,7 +1,10 @@
-package com.example.careconnect.screens
+package screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,11 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+
 
 @Composable
 fun LoginScreen(
@@ -28,6 +27,7 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
     var showForgotPassword by remember { mutableStateOf(false) }
 
@@ -68,14 +68,24 @@ fun LoginScreen(
         Text("Password", modifier = Modifier.align(Alignment.Start))
         OutlinedTextField(
             value = password,
-            onValueChange = { 
+            onValueChange = {
                 password = it
                 authViewModel.resetAuthError()
             },
-            visualTransformation = PasswordVisualTransformation(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            trailingIcon = {
+                IconButton(
+                    onClick = { passwordVisible = !passwordVisible }
+                ) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                    )
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -101,8 +111,8 @@ fun LoginScreen(
             Text(
                 text = "Forgot password?",
                 color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.clickable(enabled = !isLoading) { 
-                    showForgotPassword = true 
+                modifier = Modifier.clickable(enabled = !isLoading) {
+                    showForgotPassword = true
                 }
             )
         }
@@ -157,7 +167,7 @@ fun LoginScreen(
     // Forgot Password Dialog
     if (showForgotPassword) {
         ForgotPasswordDialog(
-            onDismiss = { 
+            onDismiss = {
                 showForgotPassword = false
                 authViewModel.resetForgotPasswordState()
             },
@@ -170,13 +180,13 @@ fun LoginScreen(
 }
 
 @Composable
+
 fun ForgotPasswordDialog(
     onDismiss: () -> Unit,
-    onSendEmail: (String) -> Unit,
-    forgotPasswordState: Any? // Replace with actual state type
+    onSendEmail: (String) -> Unit
 ) {
     var email by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Reset Password") },
@@ -195,7 +205,7 @@ fun ForgotPasswordDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { 
+                onClick = {
                     if (email.isNotBlank()) {
                         onSendEmail(email)
                     }
@@ -211,3 +221,4 @@ fun ForgotPasswordDialog(
         }
     )
 }
+

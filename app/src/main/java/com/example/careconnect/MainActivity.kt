@@ -6,7 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.AppDatabase
 import com.example.careconnect.screens.MainAppScreen
-import com.example.careconnect.screens.AuthScreen
+import screens.AuthScreen
 import com.example.careconnect.screens.OnboardingScreen
 import com.example.careconnect.repository.SocialRepository
 import com.example.careconnect.ui.theme.CareConnectTheme

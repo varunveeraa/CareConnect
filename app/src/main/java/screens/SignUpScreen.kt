@@ -1,4 +1,4 @@
-package com.example.careconnect.screens
+package screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,13 +16,12 @@ import com.example.careconnect.viewmodel.FirebaseSignUpState
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthScreen(
+internal fun AuthScreen(
     authViewModel: FirebaseAuthViewModel = viewModel(),
     onAuthSuccess: () -> Unit = {}
 ) {
-    var selectedTabIndex by remember { mutableStateOf(1) } // Start with signup tab
+    var selectedTabIndex by remember { mutableIntStateOf(1) } // Start with signup tab
     val tabs = listOf("Login", "Sign Up")
     
     val authState by authViewModel.authState.collectAsState()
@@ -348,32 +347,73 @@ fun ForgotPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reset Password") },
+        title = {
+            Text(
+                "Reset Your Password",
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
         text = {
             Column {
-                Text("Enter your email address to receive a password reset link.")
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "We'll send you a secure link to reset your password. Please enter your email address below:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Email Address") },
+                    placeholder = { Text("Enter your email") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = forgotPasswordState !is com.example.careconnect.viewmodel.ForgotPasswordState.Loading
                 )
                 
                 when (forgotPasswordState) {
                     is com.example.careconnect.viewmodel.ForgotPasswordState.Success -> {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Password reset email sent! Check your inbox.",
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Text(
+                                    "✅ Email Sent Successfully!",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Check your inbox for a password reset link. If you don't see it, please check your spam folder.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
                     }
                     is com.example.careconnect.viewmodel.ForgotPasswordState.Error -> {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            forgotPasswordState.message,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Text(
+                                "❌ ${forgotPasswordState.message}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
                     }
                     else -> {}
                 }
@@ -389,14 +429,23 @@ fun ForgotPasswordDialog(
                 enabled = email.isNotBlank() && forgotPasswordState !is com.example.careconnect.viewmodel.ForgotPasswordState.Loading
             ) {
                 if (forgotPasswordState is com.example.careconnect.viewmodel.ForgotPasswordState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Sending...")
+                    }
                 } else {
-                    Text("Send")
+                    Text("Send Reset Link")
                 }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = forgotPasswordState !is com.example.careconnect.viewmodel.ForgotPasswordState.Loading
+            ) {
                 Text("Cancel")
             }
         }
