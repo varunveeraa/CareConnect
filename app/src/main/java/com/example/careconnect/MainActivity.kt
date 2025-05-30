@@ -16,6 +16,8 @@ import com.example.careconnect.database.AppDatabase
 import com.example.careconnect.screens.MainAppScreen
 import com.example.careconnect.screens.AuthScreen
 import com.example.careconnect.screens.OnboardingScreen
+import com.example.careconnect.screens.SplashScreen
+import com.example.careconnect.screens.EnhancedAuthScreen
 import com.example.careconnect.repository.SocialRepository
 import com.example.careconnect.ui.theme.CareConnectTheme
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
@@ -47,6 +49,8 @@ fun CareConnectApp() {
     val currentUser = firebaseAuth.currentUser
     val context = LocalContext.current
 
+    var showSplash by remember { mutableStateOf(true) }
+
     // Initialize health data when app starts and user is authenticated
     LaunchedEffect(authState) {
         if (authState is FirebaseAuthState.Authenticated) {
@@ -55,67 +59,73 @@ fun CareConnectApp() {
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        when (authState) {
-            is FirebaseAuthState.Loading -> {
-                // Show loading screen while checking authentication
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+        if (showSplash) {
+            SplashScreen(
+                onNavigateToAuth = { showSplash = false }
+            )
+        } else {
+            when (authState) {
+                is FirebaseAuthState.Loading -> {
+                    // Show loading screen while checking authentication
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
-            is FirebaseAuthState.Authenticated -> {
-                // User is signed in and onboarded, show main app with navigation
-                val database = AppDatabase.getDatabase(context)
-                
-                val socialRepository = SocialRepository(
-                    userDao = database.userDao(),
-                    followRequestDao = database.followRequestDao(),
-                    followingDao = database.followingDao()
-                )
-                val socialViewModel: SocialViewModel = viewModel(
-                    factory = SocialViewModelFactory(socialRepository)
-                )
+                is FirebaseAuthState.Authenticated -> {
+                    // User is signed in and onboarded, show main app with navigation
+                    val database = AppDatabase.getDatabase(context)
+                    
+                    val socialRepository = SocialRepository(
+                        userDao = database.userDao(),
+                        followRequestDao = database.followRequestDao(),
+                        followingDao = database.followingDao()
+                    )
+                    val socialViewModel: SocialViewModel = viewModel(
+                        factory = SocialViewModelFactory(socialRepository)
+                    )
 
-                val newsViewModel: NewsViewModel = viewModel()
+                    val newsViewModel: NewsViewModel = viewModel()
 
-                // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
-                val currentUser = remember { 
-                    com.example.careconnect.database.User(
-                        id = 1,
-                        fullName = "Current User",
-                        email = currentUser?.uid ?: "user@example.com", // This should be the actual Firebase UID in a real app
-                        password = "",
-                        dateOfBirth = "",
-                        gender = "",
-                        isLoggedIn = true
+                    // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
+                    val currentUser = remember { 
+                        com.example.careconnect.database.User(
+                            id = 1,
+                            fullName = "Current User",
+                            email = currentUser?.uid ?: "user@example.com", // This should be the actual Firebase UID in a real app
+                            password = "",
+                            dateOfBirth = "",
+                            gender = "",
+                            isLoggedIn = true
+                        )
+                    }
+                    
+                    MainAppScreen(
+                        currentUser = currentUser,
+                        socialViewModel = socialViewModel,
+                        authViewModel = authViewModel,
+                        newsViewModel = newsViewModel
                     )
                 }
-                
-                MainAppScreen(
-                    currentUser = currentUser,
-                    socialViewModel = socialViewModel,
-                    authViewModel = authViewModel,
-                    newsViewModel = newsViewModel
-                )
-            }
-            is FirebaseAuthState.NeedsOnboarding -> {
-                // User is signed in but needs onboarding
-                OnboardingScreen(
-                    onOnboardingComplete = {
-                        authViewModel.onboardingCompleted()
-                    }
-                )
-            }
-            is FirebaseAuthState.Unauthenticated, is FirebaseAuthState.Error -> {
-                // User is not signed in, show auth screen
-                AuthScreen(
-                    authViewModel = authViewModel,
-                    onAuthSuccess = {
-                        // Navigation will be handled automatically by the ViewModel
-                    }
-                )
+                is FirebaseAuthState.NeedsOnboarding -> {
+                    // User is signed in but needs onboarding
+                    OnboardingScreen(
+                        onOnboardingComplete = {
+                            authViewModel.onboardingCompleted()
+                        }
+                    )
+                }
+                is FirebaseAuthState.Unauthenticated, is FirebaseAuthState.Error -> {
+                    // User is not signed in, show enhanced auth screen
+                    EnhancedAuthScreen(
+                        authViewModel = authViewModel,
+                        onAuthSuccess = {
+                            // Navigation will be handled automatically by the ViewModel
+                        }
+                    )
+                }
             }
         }
     }
