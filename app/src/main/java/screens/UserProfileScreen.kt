@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,7 +24,8 @@ fun UserProfileScreen(
     user: User,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     var isFollowing by remember { mutableStateOf(false) }
     var followRequestStatus by remember { mutableStateOf<String?>(null) }
@@ -102,41 +104,68 @@ fun UserProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Follow button (only show if not current user)
+            // Action buttons for other users
             if (user.id != currentUser.id) {
-                when {
-                    isFollowing -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Follow button
+                    when {
+                        isFollowing -> {
+                            Button(
+                                onClick = {
+                                    socialViewModel.unfollowUser(currentUser.id, user.id)
+                                    isFollowing = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Gray
+                                )
+                            ) {
+                                Text("Following")
+                            }
+                        }
+                        followRequestStatus == "pending" -> {
+                            Button(
+                                onClick = { /* Already sent */ },
+                                enabled = false,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Request Sent")
+                            }
+                        }
+                        else -> {
+                            Button(
+                                onClick = {
+                                    socialViewModel.sendFollowRequest(currentUser.id, user.id)
+                                    followRequestStatus = "pending"
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Follow")
+                            }
+                        }
+                    }
+                    
+                    // Message button
+                    if (onStartChat != null) {
                         Button(
                             onClick = {
-                                socialViewModel.unfollowUser(currentUser.id, user.id)
-                                isFollowing = false
+                                onStartChat(user.email, user.fullName)
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
+                                containerColor = MaterialTheme.colorScheme.secondary
                             )
                         ) {
-                            Text("Following")
-                        }
-                    }
-                    followRequestStatus == "pending" -> {
-                        Button(
-                            onClick = { /* Already sent */ },
-                            enabled = false,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Request Sent")
-                        }
-                    }
-                    else -> {
-                        Button(
-                            onClick = {
-                                socialViewModel.sendFollowRequest(currentUser.id, user.id)
-                                followRequestStatus = "pending"
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Follow")
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = "Message",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Message")
                         }
                     }
                 }

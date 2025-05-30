@@ -1,16 +1,18 @@
 package com.example.careconnect.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,33 +20,79 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.careconnect.api.OverpassPlace
 import com.example.careconnect.viewmodel.HealthViewModel
-import com.example.careconnect.viewmodel.MapsViewModel
+import com.example.careconnect.viewmodel.LocationViewModel
+import com.example.careconnect.viewmodel.ReminderViewModel
 import com.example.careconnect.health.HealthSummary
 import com.example.careconnect.health.MetricsPeriod
 import com.example.careconnect.health.DailyHealthData
-import com.example.careconnect.ui.maps.EmbeddedMapView
+import com.example.careconnect.firestore.SchedulingReminder
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HealthToolsScreen(
-    onNavigateToDetailedView: (MetricsPeriod) -> Unit = {}
+    onNavigateToDetailedView: (MetricsPeriod) -> Unit = {},
+    onNavigateToManageReminders: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val healthViewModel: HealthViewModel = remember { HealthViewModel(context) }
+    val locationViewModel: LocationViewModel = viewModel()
+    val reminderViewModel: ReminderViewModel = viewModel()
     
     val dailySummary by healthViewModel.dailySummary.collectAsState()
     val weeklySummary by healthViewModel.weeklySummary.collectAsState()
     val monthlySummary by healthViewModel.monthlySummary.collectAsState()
     val isLoading by healthViewModel.isLoading.collectAsState()
     val connectionStatus by healthViewModel.connectionStatus.collectAsState()
-
-    var expandedSection by remember { mutableStateOf<String?>(null) }
-    var selectedPeriod by remember { mutableStateOf<MetricsPeriod>(MetricsPeriod.DAILY) }
+    
+    // Reminder states
+    val reminders by reminderViewModel.reminders.collectAsState()
+    val reminderMessage by reminderViewModel.message.collectAsState()
+    
+    // Location tracking states
+    val isTrackingEnabled by locationViewModel.isTrackingEnabled.observeAsState(false)
+    val lastLocationStatus by locationViewModel.lastLocationStatus.observeAsState("")
+    val shouldRequestPermission by locationViewModel.shouldRequestPermission.observeAsState(false)
+    
+    // Permission launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseLocationGranted = permissions[android.Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        
+        if (fineLocationGranted || coarseLocationGranted) {
+            locationViewModel.onPermissionGranted()
+        } else {
+            locationViewModel.onPermissionDenied()
+        }
+    }
+    
+    // Handle permission request
+    LaunchedEffect(shouldRequestPermission) {
+        if (shouldRequestPermission) {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+            locationViewModel.onPermissionRequestHandled()
+        }
+    }
+    
+    // Show reminder message
+    LaunchedEffect(reminderMessage) {
+        if (reminderMessage.isNotEmpty()) {
+            // Clear message after showing it
+            reminderViewModel.clearMessage()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -94,165 +142,721 @@ fun HealthToolsScreen(
                 )
             }
         }
-
-        // Accordion sections
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Summary Section
-            AccordionSection(
-                title = "Summary",
-                isExpanded = expandedSection == "summary",
-                onExpandChange = {
-                    expandedSection = if (expandedSection == "summary") null else "summary"
-                }
+        
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = { selectedPeriod = MetricsPeriod.DAILY },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedPeriod == MetricsPeriod.DAILY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (selectedPeriod == MetricsPeriod.DAILY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text(text = "Daily")
-                    }
-
-                    Button(
-                        onClick = { selectedPeriod = MetricsPeriod.WEEKLY },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedPeriod == MetricsPeriod.WEEKLY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (selectedPeriod == MetricsPeriod.WEEKLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text(text = "Weekly")
-                    }
-
-                    Button(
-                        onClick = { selectedPeriod = MetricsPeriod.MONTHLY },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (selectedPeriod == MetricsPeriod.MONTHLY) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (selectedPeriod == MetricsPeriod.MONTHLY) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text(text = "Monthly")
-                    }
-                }
-
-                if (isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        when (selectedPeriod) {
-                            MetricsPeriod.DAILY -> HealthSummaryCard(
-                                title = "Daily Summary",
-                                summary = dailySummary,
-                                period = MetricsPeriod.DAILY
-                            )
-
-                            MetricsPeriod.WEEKLY -> HealthSummaryCard(
-                                title = "Weekly Summary",
-                                summary = weeklySummary,
-                                period = MetricsPeriod.WEEKLY
-                            )
-
-                            MetricsPeriod.MONTHLY -> HealthSummaryCard(
-                                title = "Monthly Summary",
-                                summary = monthlySummary,
-                                period = MetricsPeriod.MONTHLY
-                            )
-                        }
-
-                        // Move the detailed view button to the bottom
-                        OutlinedButton(
-                            onClick = { onNavigateToDetailedView(selectedPeriod) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 16.dp)
-                        ) {
-                            Text(text = "Detailed View")
-                        }
-                    }
-                }
+                CircularProgressIndicator()
             }
-
-            // Reminders Section
-            AccordionSection(
-                title = "Reminders",
-                isExpanded = expandedSection == "reminders",
-                onExpandChange = {
-                    expandedSection = if (expandedSection == "reminders") null else "reminders"
-                }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Reminders content coming soon",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Maps Section
-            AccordionSection(
-                title = "Maps",
-                isExpanded = expandedSection == "maps",
-                onExpandChange = {
-                    expandedSection = if (expandedSection == "maps") null else "maps"
+                item {
+                    RemindersSummaryCard(
+                        reminders = reminders,
+                        onNavigateToManage = onNavigateToManageReminders
+                    )
                 }
-            ) {
-                MapsContent()
+                
+                item {
+                    LocationTrackingCard(
+                        isTrackingEnabled = isTrackingEnabled,
+                        lastLocationStatus = lastLocationStatus,
+                        hasPermission = locationViewModel.hasLocationPermission(),
+                        onStartTracking = { locationViewModel.startLocationTracking() },
+                        onStopTracking = { locationViewModel.stopLocationTracking() },
+                        onGetCurrentLocation = { locationViewModel.getCurrentLocationAndSave() },
+                        onRequestPermission = { locationViewModel.requestLocationPermission() }
+                    )
+                }
+                
+                item {
+                    HealthSummaryCard(
+                        title = "Daily Summary",
+                        summary = dailySummary,
+                        period = MetricsPeriod.DAILY,
+                        onDetailedViewClick = onNavigateToDetailedView
+                    )
+                }
+                
+                item {
+                    HealthSummaryCard(
+                        title = "Weekly Summary",
+                        summary = weeklySummary,
+                        period = MetricsPeriod.WEEKLY,
+                        onDetailedViewClick = onNavigateToDetailedView
+                    )
+                }
+                
+                item {
+                    HealthSummaryCard(
+                        title = "Monthly Summary",
+                        summary = monthlySummary,
+                        period = MetricsPeriod.MONTHLY,
+                        onDetailedViewClick = onNavigateToDetailedView
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun AccordionSection(
-    title: String,
-    isExpanded: Boolean,
-    onExpandChange: () -> Unit,
-    content: @Composable () -> Unit
+fun RemindersSummaryCard(
+    reminders: List<SchedulingReminder>,
+    onNavigateToManage: () -> Unit
 ) {
+    val activeReminders = reminders.filter { reminder ->
+        try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val endDate = dateFormat.parse(reminder.endDate)
+            val today = Date()
+            endDate?.after(today) ?: false || endDate?.equals(today) ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onExpandChange() }
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Notifications,
+                        contentDescription = "Reminders",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = "Reminders",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                OutlinedButton(
+                    onClick = onNavigateToManage,
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(
+                        text = "Manage",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (reminders.isEmpty()) {
                 Text(
-                    text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Medium
+                    text = "No reminders set. Use 'Manage' to create your first reminder.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = reminders.size.toString(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Total",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = activeReminders.size.toString(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Active",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = reminders.count { it.hasAccountability }.toString(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "With Partners",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
+@Composable
+fun ReminderItem(
+    reminder: SchedulingReminder,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = reminder.title,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp
+                )
+                Text(
+                    text = "${reminder.startDate} - ${reminder.endDate}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Type: ${reminder.type} • Time: ${reminder.reminderTime}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (reminder.hasAccountability) {
+                    Text(
+                        text = "${reminder.accountabilityPartners.size} accountability partner(s)",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+            
+            IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand"
+                    Icons.Default.Delete,
+                    contentDescription = "Delete Reminder",
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
+        }
+    }
+}
 
-            if (isExpanded) {
-                content()
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddReminderForm(
+    onSave: (SchedulingReminder) -> Unit,
+    onCancel: () -> Unit,
+    reminderViewModel: ReminderViewModel
+) {
+    var title by remember { mutableStateOf("") }
+    var startDate by remember { mutableStateOf("") }
+    var endDate by remember { mutableStateOf("") }
+    var reminderTime by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var hasAccountability by remember { mutableStateOf(false) }
+    var selectedPartners by remember { mutableStateOf(emptyList<String>()) }
+    var showAccountabilityPartners by remember { mutableStateOf(false) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showTypeDropdown by remember { mutableStateOf(false) }
+    
+    val followers by reminderViewModel.followers.collectAsState()
+    
+    // Type options
+    val typeOptions = listOf(
+        "Medication",
+        "Exercise",
+        "Appointment",
+        "Check-up",
+        "Therapy",
+        "Diet",
+        "Sleep",
+        "Water Intake",
+        "Other"
+    )
+    
+    // Date validation function
+    fun isEndDateValid(): Boolean {
+        if (startDate.isEmpty() || endDate.isEmpty()) return true
+        return try {
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val start = dateFormat.parse(startDate)
+            val end = dateFormat.parse(endDate)
+            end?.after(start) ?: true || end?.equals(start) ?: true
+        } catch (e: Exception) {
+            true
+        }
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Add New Reminder",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Start Date with Calendar Picker
+            OutlinedTextField(
+                value = startDate,
+                onValueChange = { },
+                label = { Text("Start Date") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showStartDatePicker = true },
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showStartDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select Start Date")
+                    }
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // End Date with Calendar Picker and Validation
+            OutlinedTextField(
+                value = endDate,
+                onValueChange = { },
+                label = { Text("End Date") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showEndDatePicker = true },
+                readOnly = true,
+                isError = !isEndDateValid(),
+                supportingText = {
+                    if (!isEndDateValid()) {
+                        Text(
+                            text = "End date must be same as or after start date",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                trailingIcon = {
+                    IconButton(onClick = { showEndDatePicker = true }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Select End Date")
+                    }
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Time Picker
+            OutlinedTextField(
+                value = reminderTime,
+                onValueChange = { },
+                label = { Text("Reminder Time") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showTimePicker = true },
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { showTimePicker = true }) {
+                        Icon(Icons.Default.AccessTime, contentDescription = "Select Time")
+                    }
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Type Dropdown
+            ExposedDropdownMenuBox(
+                expanded = showTypeDropdown,
+                onExpandedChange = { showTypeDropdown = !showTypeDropdown }
+            ) {
+                OutlinedTextField(
+                    value = type,
+                    onValueChange = { },
+                    label = { Text("Type") },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown)
+                    }
+                )
+                
+                ExposedDropdownMenu(
+                    expanded = showTypeDropdown,
+                    onDismissRequest = { showTypeDropdown = false }
+                ) {
+                    typeOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                type = option
+                                showTypeDropdown = false
+                            }
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = hasAccountability,
+                    onCheckedChange = { hasAccountability = it }
+                )
+                Text(
+                    text = "Accountability",
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { hasAccountability = !hasAccountability }
+                )
+                
+                if (hasAccountability) {
+                    TextButton(
+                        onClick = { showAccountabilityPartners = !showAccountabilityPartners }
+                    ) {
+                        Text("Select Partners (${selectedPartners.size})")
+                    }
+                }
+            }
+            
+            if (hasAccountability && showAccountabilityPartners) {
+                Spacer(modifier = Modifier.height(12.dp))
+                AccountabilityPartnersSection(
+                    followers = followers,
+                    selectedPartners = selectedPartners,
+                    onSelectionChange = { selectedPartners = it }
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onCancel) {
+                    Text("Cancel")
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Button(
+                    onClick = {
+                        if (title.isNotBlank() && startDate.isNotBlank() && 
+                            endDate.isNotBlank() && reminderTime.isNotBlank() && 
+                            type.isNotBlank() && isEndDateValid()) {
+                            
+                            val reminder = SchedulingReminder(
+                                title = title,
+                                startDate = startDate,
+                                endDate = endDate,
+                                reminderTime = reminderTime,
+                                type = type,
+                                hasAccountability = hasAccountability,
+                                accountabilityPartners = selectedPartners
+                            )
+                            onSave(reminder)
+                        }
+                    },
+                    enabled = title.isNotBlank() && startDate.isNotBlank() && 
+                            endDate.isNotBlank() && reminderTime.isNotBlank() && 
+                            type.isNotBlank() && isEndDateValid()
+                ) {
+                    Text("Save")
+                }
+            }
+        }
+    }
+    
+    // Date Pickers
+    if (showStartDatePicker) {
+        SimpleDatePickerDialog(
+            onDateSelected = { date ->
+                startDate = date
+                // Reset end date if it becomes invalid
+                if (endDate.isNotEmpty() && !isEndDateValid()) {
+                    endDate = ""
+                }
+                showStartDatePicker = false
+            },
+            onDismiss = { showStartDatePicker = false }
+        )
+    }
+    
+    if (showEndDatePicker) {
+        SimpleDatePickerDialog(
+            onDateSelected = { date ->
+                endDate = date
+                showEndDatePicker = false
+            },
+            onDismiss = { showEndDatePicker = false }
+        )
+    }
+    
+    // Time Picker
+    if (showTimePicker) {
+        TimePickerDialog(
+            onTimeSelected = { time ->
+                reminderTime = time
+                showTimePicker = false
+            },
+            onDismiss = { showTimePicker = false }
+        )
+    }
+}
+
+@Composable
+fun AccountabilityPartnersSection(
+    followers: List<Map<String, Any>>,
+    selectedPartners: List<String>,
+    onSelectionChange: (List<String>) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Text(
+                text = "Select Accountability Partners",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (followers.isEmpty()) {
+                Text(
+                    text = "No followers available. Connect with others to add accountability partners.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                followers.forEach { follower ->
+                    val name = follower["fullName"] as? String ?: "Unknown"
+                    val uid = follower["uid"] as? String ?: ""
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectionChange(
+                                    if (selectedPartners.contains(uid)) {
+                                        selectedPartners - uid
+                                    } else {
+                                        selectedPartners + uid
+                                    }
+                                )
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = selectedPartners.contains(uid),
+                            onCheckedChange = { isChecked ->
+                                onSelectionChange(
+                                    if (isChecked) {
+                                        selectedPartners + uid
+                                    } else {
+                                        selectedPartners - uid
+                                    }
+                                )
+                            }
+                        )
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Text(
+                            text = name,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimpleDatePickerDialog(
+    onDateSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val datePickerState = rememberDatePickerState()
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Select Date",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                DatePicker(
+                    state = datePickerState,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Button(
+                        onClick = {
+                            datePickerState.selectedDateMillis?.let { millis ->
+                                val calendar = Calendar.getInstance()
+                                calendar.timeInMillis = millis
+                                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                val dateString = dateFormat.format(calendar.time)
+                                onDateSelected(dateString)
+                            }
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimePickerDialog(
+    onTimeSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val timePickerState = rememberTimePickerState()
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "Select Time",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                TimePicker(
+                    state = timePickerState
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Button(
+                        onClick = {
+                            val hour = timePickerState.hour
+                            val minute = timePickerState.minute
+                            val timeString = String.format("%02d:%02d", hour, minute)
+                            onTimeSelected(timeString)
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                }
             }
         }
     }
@@ -262,7 +866,8 @@ fun AccordionSection(
 fun HealthSummaryCard(
     title: String,
     summary: HealthSummary?,
-    period: MetricsPeriod
+    period: MetricsPeriod,
+    onDetailedViewClick: (MetricsPeriod) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -271,14 +876,30 @@ fun HealthSummaryCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                OutlinedButton(
+                    onClick = { onDetailedViewClick(period) },
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(
+                        text = "Detailed View",
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
             if (summary != null && summary.totalDays > 0) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -290,7 +911,7 @@ fun HealthSummaryCard(
                         icon = Icons.Default.DirectionsWalk,
                         color = MaterialTheme.colorScheme.primary
                     )
-
+                    
                     MetricItem(
                         title = "Heart Rate",
                         value = "${summary.avgHeartRate.roundToInt()}",
@@ -299,9 +920,9 @@ fun HealthSummaryCard(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -313,7 +934,7 @@ fun HealthSummaryCard(
                         icon = Icons.Default.Bedtime,
                         color = MaterialTheme.colorScheme.secondary
                     )
-
+                    
                     MetricItem(
                         title = "Calories",
                         value = "${summary.avgCalories.roundToInt()}",
@@ -322,9 +943,9 @@ fun HealthSummaryCard(
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.height(8.dp))
-
+                
                 Text(
                     text = "Based on ${summary.totalDays} day${if (summary.totalDays != 1) "s" else ""} of data",
                     fontSize = 12.sp,
@@ -585,442 +1206,141 @@ fun SmallMetricItem(
 }
 
 @Composable
-fun MapsContent() {
-    val context = LocalContext.current
-    val mapsViewModel: MapsViewModel = remember { MapsViewModel() }
-
-    val allPlaces by mapsViewModel.allPlaces.collectAsState()
-    val pharmacies by mapsViewModel.pharmacies.collectAsState()
-    val clinics by mapsViewModel.clinics.collectAsState()
-    val isLoading by mapsViewModel.isLoading.collectAsState()
-    val selectedPlaceType by mapsViewModel.selectedPlaceType.collectAsState()
-    val errorMessage by mapsViewModel.errorMessage.collectAsState()
-    val selectedMelbourneArea by mapsViewModel.selectedMelbourneArea.collectAsState()
-    val mapCenter by mapsViewModel.mapCenter.collectAsState()
-    val isGeocoding by mapsViewModel.isGeocoding.collectAsState()
-
-    // Melbourne default coordinates
-    val melbourneCoords = mapsViewModel.getMelbourneCoordinates()
-    var userLatitude by remember { mutableStateOf(melbourneCoords.first) }
-    var userLongitude by remember { mutableStateOf(melbourneCoords.second) }
-    var suburbSearchText by remember { mutableStateOf("") }
-
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .padding(bottom = 100.dp) // Extra padding to avoid bottom nav collision
-    ) {
-        // Location input section
-        Text(
-            text = "Find Healthcare in Melbourne",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp) // Reduced from 16dp
-        )
-
-        // Suburb search bar
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(8.dp) // Reduced from 12dp
-            ) {
-                Text(
-                    text = "Search Melbourne Suburbs",
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-
-                Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = suburbSearchText,
-                        onValueChange = { suburbSearchText = it },
-                        label = { Text("search suburb") },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isGeocoding && !isLoading
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = {
-                            if (suburbSearchText.isNotBlank()) {
-                                mapsViewModel.searchSuburb(suburbSearchText.trim())
-                            }
-                        },
-                        enabled = !isGeocoding && !isLoading && suburbSearchText.isNotBlank()
-                    ) {
-                        if (isGeocoding) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Search")
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Melbourne area quick selection
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(8.dp) // Reduced from 12dp
-            ) {
-                Text(
-                    text = "Quick Melbourne Areas",
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    item {
-                        OutlinedButton(
-                            onClick = {
-                                mapsViewModel.searchMelbourneCBD()
-                                userLatitude = -37.8136
-                                userLongitude = 144.9631
-                            },
-                            enabled = !isLoading && !isGeocoding
-                        ) {
-                            Text("CBD", fontSize = 12.sp)
-                        }
-                    }
-
-                    item {
-                        OutlinedButton(
-                            onClick = {
-                                mapsViewModel.searchSouthYarra()
-                                userLatitude = -37.8394
-                                userLongitude = 144.9926
-                            },
-                            enabled = !isLoading && !isGeocoding
-                        ) {
-                            Text("South Yarra", fontSize = 12.sp)
-                        }
-                    }
-
-                    item {
-                        OutlinedButton(
-                            onClick = {
-                                mapsViewModel.searchStKilda()
-                                userLatitude = -37.8676
-                                userLongitude = 144.9803
-                            },
-                            enabled = !isLoading && !isGeocoding
-                        ) {
-                            Text("St Kilda", fontSize = 12.sp)
-                        }
-                    }
-
-                    item {
-                        OutlinedButton(
-                            onClick = {
-                                mapsViewModel.searchRichmond()
-                                userLatitude = -37.8197
-                                userLongitude = 144.9917
-                            },
-                            enabled = !isLoading && !isGeocoding
-                        ) {
-                            Text("Richmond", fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Embedded Map View (keeping full size)
-        EmbeddedMapView(
-            modifier = Modifier.fillMaxWidth(),
-            center = mapCenter,
-            places = allPlaces,
-            selectedPlaceType = selectedPlaceType,
-            onFullScreenClick = {
-                // TODO: Navigate to full screen map
-            }
-        )
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Show selected area
-        selectedMelbourneArea?.let { area ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "📍 Searching in: $area",
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { mapsViewModel.clearMelbourneArea() }) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Clear area",
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-        }
-
-        // Manual coordinate input
-        Text(
-            text = "Or enter custom coordinates:",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            OutlinedTextField(
-                value = String.format("%.4f", userLatitude),
-                onValueChange = {
-                    userLatitude = it.toDoubleOrNull() ?: userLatitude
-                    mapsViewModel.clearMelbourneArea()
-                },
-                label = { Text("Latitude") },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp),
-                enabled = !isLoading && !isGeocoding
-            )
-
-            OutlinedTextField(
-                value = String.format("%.4f", userLongitude),
-                onValueChange = {
-                    userLongitude = it.toDoubleOrNull() ?: userLongitude
-                    mapsViewModel.clearMelbourneArea()
-                },
-                label = { Text("Longitude") },
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp),
-                enabled = !isLoading && !isGeocoding
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Search button
-        Button(
-            onClick = { mapsViewModel.searchNearbyPlaces(userLatitude, userLongitude) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading && !isGeocoding
-        ) {
-            if (isLoading) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Searching...")
-                }
-            } else {
-                Text("Search Healthcare Near Location")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Place type selector
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            FilterChip(
-                onClick = { mapsViewModel.setSelectedPlaceType("all") },
-                label = { Text("All (${allPlaces.size})") },
-                selected = selectedPlaceType == "all"
-            )
-
-            FilterChip(
-                onClick = { mapsViewModel.setSelectedPlaceType("pharmacy") },
-                label = { Text("Pharmacies (${pharmacies.size})") },
-                selected = selectedPlaceType == "pharmacy"
-            )
-
-            FilterChip(
-                onClick = { mapsViewModel.setSelectedPlaceType("clinic") },
-                label = { Text("Clinics (${clinics.size})") },
-                selected = selectedPlaceType == "clinic"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp)) // Reduced from 16dp
-
-        // Error message
-        errorMessage?.let { error ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = { mapsViewModel.clearError() }) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = "Clear error",
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-        }
-
-        // Results
-        val currentPlaces = mapsViewModel.getCurrentPlaces()
-
-        if (currentPlaces.isNotEmpty()) {
-            // Summary info
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            ) {
-                Text(
-                    text = "Found ${currentPlaces.size} ${if (selectedPlaceType == "all") "healthcare places" else selectedPlaceType} nearby" +
-                            (selectedMelbourneArea?.let { " in $it" } ?: ""),
-                    modifier = Modifier.padding(8.dp), // Reduced from 12dp
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp)) // Reduced from 8dp
-
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp) // Reduced from 8dp
-            ) {
-                items(currentPlaces) { place ->
-                    OverpassPlaceItem(place = place)
-                }
-            }
-        } else if (!isLoading && !isGeocoding && errorMessage == null) {
-            Text(
-                text = "No ${selectedPlaceType} found nearby.\nTry selecting a different Melbourne area or adjusting coordinates.",
-                modifier = Modifier.padding(8.dp), // Reduced from 16dp
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun OverpassPlaceItem(place: OverpassPlace) {
+fun LocationTrackingCard(
+    isTrackingEnabled: Boolean,
+    lastLocationStatus: String,
+    hasPermission: Boolean,
+    onStartTracking: () -> Unit,
+    onStopTracking: () -> Unit,
+    onGetCurrentLocation: () -> Unit,
+    onRequestPermission: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = place.name,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
                     )
-
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
                     Text(
-                        text = place.amenity.replaceFirstChar { it.uppercase() },
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 2.dp)
+                        text = "GPS Location Tracking",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-
-                // Distance could be calculated here
-                Text(
-                    text = "${String.format("%.4f", place.lat)}, ${
-                        String.format(
-                            "%.4f",
-                            place.lon
+                
+                Switch(
+                    checked = isTrackingEnabled,
+                    onCheckedChange = { 
+                        if (isTrackingEnabled) {
+                            onStopTracking()
+                        } else {
+                            onStartTracking()
+                        }
+                    },
+                    enabled = hasPermission
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (!hasPermission) {
+                Column {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
                         )
-                    }",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            place.address?.let { address ->
-                Text(
-                    text = address,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
-            place.phone?.let { phone ->
-                Text(
-                    text = "📞 $phone",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            place.openingHours?.let { hours ->
-                Text(
-                    text = "🕒 $hours",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
+                    ) {
+                        Text(
+                            text = "Location permission required. Please grant location access in app settings.",
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontSize = 14.sp
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedButton(
+                        onClick = onRequestPermission,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Default.LocationSearching,
+                            contentDescription = "Request Permission",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Request Location Permission")
+                    }
+                }
+            } else {
+                Column {
+                    Text(
+                        text = if (isTrackingEnabled) 
+                            "📍 Automatic location updates every hour" 
+                        else "⏸️ Location tracking is disabled",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    
+                    if (lastLocationStatus.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (lastLocationStatus.contains("saved") || lastLocationStatus.contains("started"))
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Text(
+                                text = "Status: $lastLocationStatus",
+                                modifier = Modifier.padding(8.dp),
+                                fontSize = 12.sp,
+                                color = if (lastLocationStatus.contains("saved") || lastLocationStatus.contains("started"))
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    OutlinedButton(
+                        onClick = onGetCurrentLocation,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = hasPermission
+                    ) {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = "Get Location",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Get Current Location Now")
+                    }
+                }
             }
         }
     }

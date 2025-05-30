@@ -2,6 +2,30 @@ package com.example.careconnect.firestore
 
 import com.google.firebase.firestore.PropertyName
 
+data class SchedulingReminder(
+    @PropertyName("title") val title: String = "",
+    @PropertyName("startDate") val startDate: String = "",
+    @PropertyName("endDate") val endDate: String = "",
+    @PropertyName("reminderTime") val reminderTime: String = "",
+    @PropertyName("type") val type: String = "",
+    @PropertyName("hasAccountability") val hasAccountability: Boolean = false,
+    @PropertyName("accountabilityPartners") val accountabilityPartners: List<String> = emptyList(),
+    @PropertyName("id") val id: String = "",
+    @PropertyName("createdAt") val createdAt: String = ""
+) {
+    constructor() : this(
+        title = "",
+        startDate = "",
+        endDate = "",
+        reminderTime = "",
+        type = "",
+        hasAccountability = false,
+        accountabilityPartners = emptyList(),
+        id = "",
+        createdAt = ""
+    )
+}
+
 data class FirestoreUser(
     @PropertyName("uid") val uid: String = "",
     @PropertyName("fullName") val fullName: String = "",
@@ -15,7 +39,8 @@ data class FirestoreUser(
     @PropertyName("isPrivate") val isPrivate: Boolean = false,
     @PropertyName("dateOfBirth") val dateOfBirth: String = "",
     @PropertyName("gender") val gender: String = "",
-    @PropertyName("searchTerms") val searchTerms: List<String> = emptyList() // For search optimization
+    @PropertyName("searchTerms") val searchTerms: List<String> = emptyList(), // For search optimization
+    @PropertyName("reminders") val reminders: List<SchedulingReminder> = emptyList()
 ) {
     // No-argument constructor required for Firestore
     constructor() : this(
@@ -31,6 +56,7 @@ data class FirestoreUser(
         isPrivate = false,
         dateOfBirth = "",
         gender = "",
-        searchTerms = emptyList()
+        searchTerms = emptyList(),
+        reminders = emptyList()
     )
 }
