@@ -17,6 +17,8 @@ import com.example.careconnect.database.AppDatabase
 import com.example.careconnect.screens.MainAppScreen
 import com.example.careconnect.screens.AuthScreen
 import com.example.careconnect.screens.OnboardingScreen
+import com.example.careconnect.screens.SplashScreen
+import com.example.careconnect.screens.EnhancedAuthScreen
 import com.example.careconnect.repository.SocialRepository
 import com.example.careconnect.ui.theme.CareConnectTheme
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
@@ -25,6 +27,7 @@ import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
 import com.example.careconnect.viewmodel.NewsViewModel
 import com.example.careconnect.util.HealthDataInitializer
+import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +50,8 @@ fun CareConnectApp() {
     val firebaseAuth = FirebaseAuth.getInstance()
     val currentUser = firebaseAuth.currentUser
     val context = LocalContext.current
+
+    var showSplash by remember { mutableStateOf(true) }
 
     // Initialize health data when app starts and user is authenticated
     LaunchedEffect(authState) {
@@ -78,7 +83,9 @@ fun CareConnectApp() {
                 val socialViewModel: SocialViewModel = viewModel(
                     factory = SocialViewModelFactory(socialRepository)
                 )
-                
+
+                val newsViewModel: NewsViewModel = viewModel()
+
                 // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
                 val currentUser = remember { 
                     com.example.careconnect.database.User(
@@ -96,11 +103,7 @@ fun CareConnectApp() {
                     currentUser = currentUser,
                     socialViewModel = socialViewModel,
                     authViewModel = authViewModel,
-                    newsViewModel = newsViewModel,
-                    onNavigateToUserChats = {
-                        // This will be handled by internal navigation in MainAppScreen
-                        // We'll need to modify MainAppScreen to handle this navigation
-                    }
+                    newsViewModel = newsViewModel
                 )
             }
             is FirebaseAuthState.NeedsOnboarding -> {
