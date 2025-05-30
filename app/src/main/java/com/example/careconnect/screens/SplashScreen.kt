@@ -13,65 +13,70 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
     onNavigateToAuth: () -> Unit
 ) {
-    var isVisible by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
-        targetValue = if (isVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 1500),
-        label = "alpha"
+    var logoVisible by remember { mutableStateOf(false) }
+    var taglineVisible by remember { mutableStateOf(false) }
+
+    val logoAlpha by animateFloatAsState(
+        targetValue = if (logoVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 1000, easing = EaseOutCubic),
+        label = "logoAlpha"
+    )
+
+    val taglineAlpha by animateFloatAsState(
+        targetValue = if (taglineVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 800, easing = EaseOutCubic),
+        label = "taglineAlpha"
     )
 
     LaunchedEffect(Unit) {
-        isVisible = true
-        delay(3000) // Show splash for 3 seconds
+        delay(500) // Initial delay
+        logoVisible = true
+        delay(600) // Stagger the tagline
+        taglineVisible = true
+        delay(2000) // Show for remaining time
         onNavigateToAuth()
     }
 
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Background image with blur
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data("android.resource://com.example.careconnect/drawable/app_background_img")
-                .crossfade(true)
-                .build(),
+        // Background image with blur effect
+        Image(
+            painter = painterResource(id = com.example.careconnect.R.drawable.app_background_img),
             contentDescription = "Background",
             modifier = Modifier
                 .fillMaxSize()
-                .blur(radius = 8.dp),
+                .blur(radius = 10.dp),
             contentScale = ContentScale.Crop
         )
-        
-        // Gradient overlay for better contrast
+
+        // Gradient overlay for better text readability
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.4f),
-                            Color.Black.copy(alpha = 0.2f),
-                            Color.Black.copy(alpha = 0.6f)
+                            Color.Black.copy(alpha = 0.3f),
+                            Color.Black.copy(alpha = 0.1f),
+                            Color.Black.copy(alpha = 0.5f)
                         )
                     )
                 )
         )
 
-        // Center content
+        // Center content with animations
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -79,37 +84,48 @@ fun SplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Icon
+            // App Icon with fade-in animation
             Image(
-                painter = painterResource(id = com.example.careconnect.R.drawable.ic_launcher_foreground),
-                contentDescription = "App Icon",
+                painter = painterResource(id = com.example.careconnect.R.drawable.app_icon),
+                contentDescription = "CareConnect App Icon",
                 modifier = Modifier
                     .size(120.dp)
-                    .graphicsLayer(alpha = alpha),
+                    .graphicsLayer(
+                        alpha = logoAlpha,
+                        scaleX = 0.8f + (logoAlpha * 0.2f),
+                        scaleY = 0.8f + (logoAlpha * 0.2f)
+                    )
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // App Name
+            // App Name with elegant typography
             Text(
                 text = "CareConnect",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Light,
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.graphicsLayer(alpha = alpha)
+                modifier = Modifier.graphicsLayer(
+                    alpha = logoAlpha,
+                    translationY = 20f * (1f - logoAlpha)
+                )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Tagline
+            // Tagline with soft, elegant typography
             Text(
                 text = "Connecting Care with Compassion",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.graphicsLayer(alpha = alpha)
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.graphicsLayer(
+                    alpha = taglineAlpha,
+                    translationY = 15f * (1f - taglineAlpha)
+                )
             )
         }
     }

@@ -34,13 +34,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
@@ -67,11 +66,8 @@ fun EnhancedAuthScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Background image with blur
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data("android.resource://com.example.careconnect/drawable/app_background_img")
-                .crossfade(true)
-                .build(),
+        Image(
+            painter = painterResource(id = com.example.careconnect.R.drawable.app_background_img),
             contentDescription = "Background",
             modifier = Modifier
                 .fillMaxSize()
