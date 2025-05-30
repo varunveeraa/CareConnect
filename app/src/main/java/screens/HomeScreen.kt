@@ -1,26 +1,56 @@
 package com.example.careconnect.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.api.NewsArticle
+import com.example.careconnect.database.User
+import com.example.careconnect.viewmodel.NewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    currentUser: User? = null,
+    newsViewModel: NewsViewModel = viewModel()
+) {
+    val articles by newsViewModel.articles.collectAsState()
+    val isLoading by newsViewModel.isLoading.collectAsState()
+    
+    LaunchedEffect(currentUser) {
+        currentUser?.let { user ->
+            // Load articles based on user's focus areas
+            newsViewModel.loadPersonalizedArticles(user)
+        } ?: run {
+            // Load general health articles for users without profiles
+            newsViewModel.loadGeneralHealthArticles()
+        }
+    }
+    
     Column(
         modifier = Modifier
-            .padding(24.dp)
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp)
     ) {
         Text(
             text = "Dashboard",
@@ -66,6 +96,7 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Reminders Section (moved above articles)
         Text(
             text = "Reminders",
             fontSize = 20.sp,
@@ -88,6 +119,142 @@ fun HomeScreen() {
                     Text("Send")
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Articles Section
+        Text(
+            text = "Health Articles for You",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+        
+        Text(
+            text = "Personalized content based on your health focus",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+        )
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (articles.isEmpty()) {
+            NoArticlesMessage()
+        } else {
+            ArticlesCarousel(articles = articles)
+        }
+    }
+}
+
+@Composable
+fun ArticlesCarousel(articles: List<NewsArticle>) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(articles) { article ->
+            ArticleCard(article = article)
+        }
+    }
+}
+
+@Composable
+fun ArticleCard(article: NewsArticle) {
+    Card(
+        modifier = Modifier
+            .width(200.dp)
+            .height(140.dp)
+            .clickable { /* Handle article click */ },
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+        ) {
+            // Article Title
+            Text(
+                text = article.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                color = Color(0xFF1A1A1A),
+                lineHeight = 16.sp
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Source and Date
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = article.source.name,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                Text(
+                    text = formatDate(article.publishedAt),
+                    fontSize = 9.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun NoArticlesMessage() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Article,
+                contentDescription = "No Articles",
+                modifier = Modifier.size(48.dp),
+                tint = Color.Gray
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "No articles available",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray
+            )
+            
+            Text(
+                text = "Complete your health profile to see personalized articles",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
@@ -130,5 +297,16 @@ fun MetricCard(
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1A1A1A) // Very dark for emphasis
         )
+    }
+}
+
+private fun formatDate(dateString: String): String {
+    return try {
+        val inputFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.getDefault())
+        val outputFormat = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+        val date = inputFormat.parse(dateString)
+        outputFormat.format(date ?: java.util.Date())
+    } catch (e: Exception) {
+        "Recent"
     }
 }
