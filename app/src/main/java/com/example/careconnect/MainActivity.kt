@@ -22,9 +22,10 @@ import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
+import com.example.careconnect.viewmodel.NewsViewModel
 import com.example.careconnect.util.HealthDataInitializer
-import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.ui.platform.LocalContext
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,7 +77,9 @@ fun CareConnectApp() {
                 val socialViewModel: SocialViewModel = viewModel(
                     factory = SocialViewModelFactory(socialRepository)
                 )
-                
+
+                val newsViewModel: NewsViewModel = viewModel()
+
                 // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
                 val currentUser = remember { 
                     com.example.careconnect.database.User(
@@ -93,7 +96,8 @@ fun CareConnectApp() {
                 MainAppScreen(
                     currentUser = currentUser,
                     socialViewModel = socialViewModel,
-                    authViewModel = authViewModel
+                    authViewModel = authViewModel,
+                    newsViewModel = newsViewModel
                 )
             }
             is FirebaseAuthState.NeedsOnboarding -> {

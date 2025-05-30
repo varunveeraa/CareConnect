@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.careconnect.database.User
 import com.example.careconnect.screens.*
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
+import com.example.careconnect.viewmodel.NewsViewModel
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.health.MetricsPeriod
 
@@ -40,6 +41,7 @@ sealed class Screen(val route: String) {
     object FollowerProfile : Screen("follower_profile/{uid}") {
         fun createRoute(uid: String) = "follower_profile/$uid"
     }
+    object ArticleDetail : Screen("article_detail")
 }
 
 @Composable
@@ -48,6 +50,7 @@ fun AppNavigation(
     currentUser: User,
     socialViewModel: SocialViewModel,
     authViewModel: FirebaseAuthViewModel,
+    newsViewModel: NewsViewModel,
     startDestination: String = Screen.Home.route,
     paddingValues: PaddingValues? = null
 ) {
@@ -57,7 +60,13 @@ fun AppNavigation(
         modifier = paddingValues?.let { Modifier.padding(it) } ?: Modifier
     ) {
         composable(Screen.Home.route) {
-            HomeScreen()
+            HomeScreen(
+                currentUser = currentUser,
+                onArticleClick = { article ->
+                    newsViewModel.selectArticle(article)
+                    navController.navigate(Screen.ArticleDetail.route)
+                }
+            )
         }
         
         composable(Screen.Browse.route) {
@@ -258,6 +267,15 @@ fun AppNavigation(
                     }
                 }
             }
+        }
+
+        composable(Screen.ArticleDetail.route) {
+            ArticleDetailScreen(
+                newsViewModel = newsViewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

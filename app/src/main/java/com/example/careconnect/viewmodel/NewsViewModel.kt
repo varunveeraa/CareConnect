@@ -21,6 +21,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _selectedArticle = MutableStateFlow<NewsArticle?>(null)
+    val selectedArticle: StateFlow<NewsArticle?> = _selectedArticle.asStateFlow()
+
     private val newsApiService: NewsApiService
 
     // Using a demo API key - replace with your actual key from newsapi.org
@@ -102,6 +105,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun selectArticle(article: NewsArticle?) {
+        _selectedArticle.value = article
     }
 
     private fun mapFocusAreasToQueries(focusArea: String?): List<String> {
@@ -192,9 +199,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "10 Tips for Better Heart Health",
                 description = "Learn essential tips to keep your heart healthy and strong.",
                 url = "https://healthline.com/heart-health",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-15T10:00:00Z",
-                content = "Heart health tips..."
+                content = "Heart health is crucial for overall well-being. Regular exercise, a balanced diet, and proper sleep can significantly improve cardiovascular health. Studies show that 30 minutes of moderate exercise daily can reduce heart disease risk by up to 50%. Eating foods rich in omega-3 fatty acids, such as salmon and walnuts, helps maintain healthy cholesterol levels..."
             ),
             NewsArticle(
                 source = NewsSource(id = "webmd", name = "WebMD"),
@@ -202,9 +209,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Understanding Mental Health",
                 description = "A comprehensive guide to mental wellness.",
                 url = "https://webmd.com/mental-health",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-14T08:30:00Z",
-                content = "Mental health guide..."
+                content = "Mental health is an essential part of overall health and well-being. It affects how we think, feel, and act. Good mental health helps us handle stress, relate to others, and make healthy choices. Common mental health conditions include anxiety, depression, and stress-related disorders. Seeking professional help when needed is important..."
             ),
             NewsArticle(
                 source = NewsSource(id = "mayo", name = "Mayo Clinic"),
@@ -212,9 +219,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Exercise Benefits for Seniors",
                 description = "How regular exercise improves quality of life.",
                 url = "https://mayoclinic.org/exercise",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-13T12:15:00Z",
-                content = "Exercise benefits..."
+                content = "Regular physical activity is one of the most important things seniors can do for their health. Exercise helps maintain bone density, muscle strength, and balance. It can also improve mood, cognitive function, and sleep quality. Even light activities like walking, swimming, or gardening can provide significant health benefits..."
             ),
             NewsArticle(
                 source = NewsSource(id = "nutrition", name = "Nutrition Today"),
@@ -222,9 +229,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Healthy Eating After 50",
                 description = "Nutritional guidelines for healthy aging.",
                 url = "https://nutrition.com/healthy-eating",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-12T16:45:00Z",
-                content = "Nutrition guide..."
+                content = "Nutritional needs change as we age. After 50, it's important to focus on nutrient-dense foods that provide essential vitamins and minerals. Adequate protein intake helps maintain muscle mass, while calcium and vitamin D support bone health. Staying hydrated and limiting processed foods can help maintain energy levels..."
             ),
             NewsArticle(
                 source = NewsSource(id = "sleep", name = "Sleep Foundation"),
@@ -232,9 +239,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Improving Sleep Quality",
                 description = "Tips for better sleep as you age.",
                 url = "https://sleepfoundation.org/quality",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-11T20:00:00Z",
-                content = "Sleep improvement..."
+                content = "Quality sleep becomes increasingly important with age. Many older adults experience changes in sleep patterns, including going to bed earlier and waking up earlier. Creating a consistent bedtime routine, maintaining a comfortable sleep environment, and avoiding caffeine late in the day can improve sleep quality..."
             ),
             NewsArticle(
                 source = NewsSource(id = "diabetes", name = "Diabetes Care"),
@@ -242,9 +249,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Managing Diabetes Daily",
                 description = "Essential tips for diabetes management.",
                 url = "https://diabetes.org/management",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-10T14:30:00Z",
-                content = "Diabetes management..."
+                content = "Daily diabetes management involves monitoring blood glucose levels, taking medications as prescribed, and maintaining a healthy lifestyle. Regular blood sugar testing helps identify patterns and adjust treatment plans. A balanced diet, regular exercise, and stress management are key components of effective diabetes care..."
             ),
             NewsArticle(
                 source = NewsSource(id = "arthritis", name = "Arthritis Foundation"),
@@ -252,9 +259,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 title = "Joint Pain Relief Strategies",
                 description = "Natural ways to reduce joint pain and stiffness.",
                 url = "https://arthritis.org/pain-relief",
-                urlToImage = null,
+                urlToImage = "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
                 publishedAt = "2024-01-09T11:15:00Z",
-                content = "Pain relief strategies..."
+                content = "Joint pain and stiffness can significantly impact daily activities. Low-impact exercises like swimming and yoga can help maintain joint flexibility and reduce pain. Heat and cold therapy, massage, and proper rest can also provide relief. Anti-inflammatory foods and maintaining a healthy weight help reduce joint stress..."
             )
         )
     }

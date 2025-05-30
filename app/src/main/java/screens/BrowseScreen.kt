@@ -105,7 +105,10 @@ fun PeriodSelector(
     selectedPeriod: MetricsPeriod,
     onPeriodSelected: (MetricsPeriod) -> Unit
 ) {
-    Row(
+
+
+
+   Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

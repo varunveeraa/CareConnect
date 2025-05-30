@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.careconnect.api.NewsArticle
 import com.example.careconnect.database.User
 import com.example.careconnect.viewmodel.NewsViewModel
@@ -31,7 +33,8 @@ import com.example.careconnect.viewmodel.NewsViewModel
 @Composable
 fun HomeScreen(
     currentUser: User? = null,
-    newsViewModel: NewsViewModel = viewModel()
+    newsViewModel: NewsViewModel = viewModel(),
+    onArticleClick: ((NewsArticle) -> Unit)? = null
 ) {
     val articles by newsViewModel.articles.collectAsState()
     val isLoading by newsViewModel.isLoading.collectAsState()
@@ -149,30 +152,42 @@ fun HomeScreen(
         } else if (articles.isEmpty()) {
             NoArticlesMessage()
         } else {
-            ArticlesCarousel(articles = articles)
+            ArticlesCarousel(
+                articles = articles,
+                onArticleClick = onArticleClick
+            )
         }
     }
 }
 
 @Composable
-fun ArticlesCarousel(articles: List<NewsArticle>) {
+fun ArticlesCarousel(
+    articles: List<NewsArticle>,
+    onArticleClick: ((NewsArticle) -> Unit)? = null
+) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(articles) { article ->
-            ArticleCard(article = article)
+            ArticleCard(
+                article = article,
+                onArticleClick = onArticleClick
+            )
         }
     }
 }
 
 @Composable
-fun ArticleCard(article: NewsArticle) {
+fun ArticleCard(
+    article: NewsArticle,
+    onArticleClick: ((NewsArticle) -> Unit)? = null
+) {
     Card(
         modifier = Modifier
             .width(200.dp)
-            .height(140.dp)
-            .clickable { /* Handle article click */ },
+            .height(180.dp)
+            .clickable { onArticleClick?.invoke(article) },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -181,6 +196,22 @@ fun ArticleCard(article: NewsArticle) {
                 .fillMaxSize()
                 .padding(8.dp)
         ) {
+            // Article Image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(article.urlToImage)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Article image",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             // Article Title
             Text(
                 text = article.title,

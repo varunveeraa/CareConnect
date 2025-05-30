@@ -13,6 +13,7 @@ import com.example.careconnect.navigation.AppNavigation
 import com.example.careconnect.navigation.Screen
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
+import com.example.careconnect.viewmodel.NewsViewModel
 
 data class BottomNavItem(
     val route: String,
@@ -25,7 +26,8 @@ data class BottomNavItem(
 fun MainAppScreen(
     currentUser: User,
     socialViewModel: SocialViewModel,
-    authViewModel: FirebaseAuthViewModel
+    authViewModel: FirebaseAuthViewModel,
+    newsViewModel: NewsViewModel
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -72,6 +74,7 @@ fun MainAppScreen(
             currentUser = currentUser,
             socialViewModel = socialViewModel,
             authViewModel = authViewModel,
+            newsViewModel = newsViewModel,
             paddingValues = paddingValues
         )
     }
