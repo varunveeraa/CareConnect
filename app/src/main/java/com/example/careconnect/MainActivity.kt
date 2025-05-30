@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.AppDatabase
 import com.example.careconnect.screens.MainAppScreen
@@ -22,9 +23,7 @@ import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
-import com.example.careconnect.viewmodel.NewsViewModel
 import com.example.careconnect.util.HealthDataInitializer
-import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
@@ -77,9 +76,7 @@ fun CareConnectApp() {
                 val socialViewModel: SocialViewModel = viewModel(
                     factory = SocialViewModelFactory(socialRepository)
                 )
-
-                val newsViewModel: NewsViewModel = viewModel()
-
+                
                 // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
                 val currentUser = remember { 
                     com.example.careconnect.database.User(
@@ -97,7 +94,10 @@ fun CareConnectApp() {
                     currentUser = currentUser,
                     socialViewModel = socialViewModel,
                     authViewModel = authViewModel,
-                    newsViewModel = newsViewModel
+                    onNavigateToUserChats = {
+                        // This will be handled by internal navigation in MainAppScreen
+                        // We'll need to modify MainAppScreen to handle this navigation
+                    }
                 )
             }
             is FirebaseAuthState.NeedsOnboarding -> {

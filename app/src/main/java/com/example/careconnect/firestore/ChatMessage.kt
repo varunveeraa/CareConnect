@@ -8,7 +8,7 @@ data class ChatMessage(
     val id: String = "",
     val chatId: String = "",
     val content: String = "",
-    val isUser: Boolean = false, // Default to false to avoid issues, will be explicitly set
+    val isUser: Boolean = false, // For AI chats - indicates if message is from user
     val timestamp: Timestamp = Timestamp.now(),
     val userId: String = ""
 ) {

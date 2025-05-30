@@ -1,8 +1,12 @@
 package com.example.careconnect.repository
 
+import android.content.Context
 import android.util.Log
+import com.example.careconnect.api.GeminiContextBuilder
 import com.example.careconnect.firestore.ChatMessage
 import com.example.careconnect.firestore.ChatSession
+import com.example.careconnect.health.HealthDataManager
+import com.example.careconnect.location.LocationManager
 import com.example.careconnect.util.ApiKeyManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -17,9 +21,21 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.UUID
 
-class ChatRepository {
+class ChatRepository(
+    private val context: Context? = null
+) {
     private val firestore = FirebaseFirestore.getInstance()
     private val apiKey = ApiKeyManager.GEMINI_API_KEY
+    
+    private val contextBuilder by lazy {
+        if (context != null) {
+            GeminiContextBuilder(
+                context = context,
+                healthDataManager = HealthDataManager(context),
+                locationManager = LocationManager(context)
+            )
+        } else null
+    }
     
     suspend fun createChatSession(userId: String, firstMessage: String): ChatSession {
         val sessionId = UUID.randomUUID().toString()
@@ -175,7 +191,7 @@ class ChatRepository {
             Log.e("ChatRepository", "Error updating chat session", e)
         }
     }
-    
+
     suspend fun sendToGemini(message: String): String = withContext(Dispatchers.IO) {
         val modelNames = listOf(
             "gemini-pro",
@@ -184,16 +200,28 @@ class ChatRepository {
             "gemini-2.0-flash-exp"
         )
         
+        // Build user context if context builder is available
+        val contextualMessage = try {
+            contextBuilder?.let { builder ->
+                val userContext = builder.buildUserContext()
+                val contextMessage = builder.formatContextMessage(userContext)
+                contextMessage + message
+            } ?: message
+        } catch (e: Exception) {
+            Log.e("ChatRepository", "Error building context, using original message", e)
+            message
+        }
+        
         for (modelName in modelNames) {
             try {
-                Log.d("ChatRepository", "Trying model: $modelName with message: $message")
+                Log.d("ChatRepository", "Trying model: $modelName with message: ${contextualMessage.take(100)}...")
                 
                 val requestBody = JSONObject().apply {
                     put("contents", JSONArray().apply {
                         put(JSONObject().apply {
                             put("parts", JSONArray().apply {
                                 put(JSONObject().apply {
-                                    put("text", message)
+                                    put("text", contextualMessage)
                                 })
                             })
                         })

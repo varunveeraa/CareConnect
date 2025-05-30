@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +32,8 @@ fun RawUserItem(
     rawUser: com.example.careconnect.viewmodel.SocialViewModel.RawFirestoreUser,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onRawUserClick: (com.example.careconnect.viewmodel.SocialViewModel.RawFirestoreUser) -> Unit
+    onRawUserClick: (com.example.careconnect.viewmodel.SocialViewModel.RawFirestoreUser) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     var followRequestStatus by remember { mutableStateOf<String?>(null) }
     var isFollowing by remember { mutableStateOf(false) }
@@ -92,43 +94,69 @@ fun RawUserItem(
             }
 
             // Follow button with Firestore functionality
-            when {
-                isFollowing -> {
-                    Button(
-                        onClick = {
-                            android.util.Log.d("RawUserItem", "Unfollowing ${rawUser.fullName} in Firestore")
-                            socialViewModel.unfollowInFirestore(currentUserUid, rawUser.uid)
-                            isFollowing = false
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Gray
-                        )
-                    ) {
-                        Text("Following")
-                    }
-                }
-                followRequestStatus == "pending" -> {
-                    Button(
-                        onClick = { /* Already sent */ },
-                        enabled = false
-                    ) {
-                        Text("Requested")
-                    }
-                }
-                else -> {
-                    Button(
-                        onClick = {
-                            android.util.Log.d("RawUserItem", "Sending Firestore follow request to ${rawUser.fullName}")
-                            socialViewModel.sendFollowRequestToFirestoreUser(
-                                fromUserUid = currentUserUid,
-                                fromUserName = currentUser.fullName,
-                                firestoreUser = rawUser
-                            )
-                            followRequestStatus = "pending"
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                when {
+                    isFollowing -> {
+                        Button(
+                            onClick = {
+                                android.util.Log.d("RawUserItem", "Unfollowing ${rawUser.fullName} in Firestore")
+                                socialViewModel.unfollowInFirestore(currentUserUid, rawUser.uid)
+                                isFollowing = false
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Following")
                         }
-                    ) {
-                        Text("Follow")
                     }
+                    followRequestStatus == "pending" -> {
+                        Button(
+                            onClick = { /* Already sent */ },
+                            enabled = false,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Requested")
+                        }
+                    }
+                    else -> {
+                        Button(
+                            onClick = {
+                                android.util.Log.d("RawUserItem", "Sending Firestore follow request to ${rawUser.fullName}")
+                                socialViewModel.sendFollowRequestToFirestoreUser(
+                                    fromUserUid = currentUserUid,
+                                    fromUserName = currentUser.fullName,
+                                    firestoreUser = rawUser
+                                )
+                                followRequestStatus = "pending"
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Follow")
+                        }
+                    }
+                }
+                
+                // Message button
+                Button(
+                    onClick = {
+                        // Navigate to start chat with this user
+                        android.util.Log.d("RawUserItem", "Starting chat with ${rawUser.fullName}")
+                        onStartChat?.invoke(rawUser.uid, rawUser.fullName)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = "Message",
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -150,7 +178,8 @@ fun PeopleScreen(
         android.util.Log.d("PeopleScreen", "Follower user clicked: ${userData["fullName"]}")
     },
     onNavigateToRequests: () -> Unit,
-    onNavigateToFirestoreRequests: () -> Unit
+    onNavigateToFirestoreRequests: () -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedListType by remember { mutableStateOf("following") } // Default to "following"
@@ -245,7 +274,8 @@ fun PeopleScreen(
                 socialViewModel = socialViewModel,
                 onFirestoreUserClick = onFirestoreUserClick,
                 onActualUserClick = onActualUserClick,
-                onRawUserClick = onRawUserClick
+                onRawUserClick = onRawUserClick,
+                onStartChat = onStartChat
             )
         } else {
             // Display Followers/Following Tabs (Following first)
@@ -269,13 +299,15 @@ fun PeopleScreen(
                     "following" -> {
                         LocalizedFollowingContent(
                             followingUsers = firestoreFollowing,
-                            onUserClick = onFollowerUserClick
+                            onUserClick = onFollowerUserClick,
+                            onStartChat = onStartChat
                         )
                     }
                     "followers" -> {
                         LocalizedFollowersContent(
                             followerUsers = firestoreFollowers,
-                            onUserClick = onFollowerUserClick
+                            onUserClick = onFollowerUserClick,
+                            onStartChat = onStartChat
                         )
                     }
                 }
@@ -377,7 +409,8 @@ fun FirestoreSearchContent(
     socialViewModel: SocialViewModel,
     onFirestoreUserClick: (FirestoreUser) -> Unit,
     onActualUserClick: (ActualUser) -> Unit,
-    onRawUserClick: (SocialViewModel.RawFirestoreUser) -> Unit
+    onRawUserClick: (SocialViewModel.RawFirestoreUser) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     Column {
         // Search results
@@ -425,7 +458,8 @@ fun FirestoreSearchContent(
                                     firestoreUser = result,
                                     currentUser = currentUser,
                                     socialViewModel = socialViewModel,
-                                    onFirestoreUserClick = onFirestoreUserClick
+                                    onFirestoreUserClick = onFirestoreUserClick,
+                                    onStartChat = onStartChat
                                 )
                             }
                             is ActualUser -> {
@@ -434,7 +468,8 @@ fun FirestoreSearchContent(
                                     actualUser = result,
                                     currentUser = currentUser,
                                     socialViewModel = socialViewModel,
-                                    onActualUserClick = onActualUserClick
+                                    onActualUserClick = onActualUserClick,
+                                    onStartChat = onStartChat
                                 )
                             }
                             is com.example.careconnect.viewmodel.SocialViewModel.RawFirestoreUser -> {
@@ -443,7 +478,8 @@ fun FirestoreSearchContent(
                                     rawUser = result,
                                     currentUser = currentUser,
                                     socialViewModel = socialViewModel,
-                                    onRawUserClick = onRawUserClick
+                                    onRawUserClick = onRawUserClick,
+                                    onStartChat = onStartChat
                                 )
                             }
                             else -> {
@@ -529,7 +565,8 @@ fun FirestoreUserItem(
     firestoreUser: FirestoreUser,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onFirestoreUserClick: (FirestoreUser) -> Unit
+    onFirestoreUserClick: (FirestoreUser) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -573,11 +610,22 @@ fun FirestoreUserItem(
                 }
             }
 
+            // Message button
             Button(
                 onClick = {
-                }
+                    // Navigate to start chat with this user
+                    android.util.Log.d("FirestoreUserItem", "Starting chat with ${firestoreUser.fullName}")
+                    onStartChat?.invoke(firestoreUser.uid, firestoreUser.fullName)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
             ) {
-                Text("Connect")
+                Icon(
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "Message",
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -588,7 +636,8 @@ fun ActualUserItem(
     actualUser: ActualUser,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onActualUserClick: (ActualUser) -> Unit
+    onActualUserClick: (ActualUser) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -634,9 +683,18 @@ fun ActualUserItem(
 
             Button(
                 onClick = {
-                }
+                    android.util.Log.d("ActualUserItem", "Starting chat with ${actualUser.fullName}")
+                    onStartChat?.invoke(actualUser.uid, actualUser.fullName)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
             ) {
-                Text("Connect")
+                Icon(
+                    Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "Message",
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -741,7 +799,8 @@ fun UserItem(
 @Composable
 fun LocalizedFollowersContent(
     followerUsers: List<Map<String, Any>>,
-    onUserClick: (Map<String, Any>) -> Unit
+    onUserClick: (Map<String, Any>) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     if (followerUsers.isEmpty()) {
         Text(
@@ -754,6 +813,7 @@ fun LocalizedFollowersContent(
             items(followerUsers) { userData ->
                 val fullName = userData["fullName"]?.toString() ?: "Unknown User"
                 val focusAreas = userData["focusAreas"] as? List<String>
+                val uid = userData["uid"]?.toString() ?: ""
 
                 Card(
                     modifier = Modifier
@@ -799,10 +859,29 @@ fun LocalizedFollowersContent(
                             }
                         }
 
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = "View profile"
-                        )
+                        // Message button
+                        if (uid.isNotEmpty() && onStartChat != null) {
+                            Button(
+                                onClick = {
+                                    onStartChat(uid, fullName)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary
+                                ),
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Chat,
+                                    contentDescription = "Message",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = "View profile"
+                            )
+                        }
                     }
                 }
             }
@@ -813,7 +892,8 @@ fun LocalizedFollowersContent(
 @Composable
 fun LocalizedFollowingContent(
     followingUsers: List<Map<String, Any>>,
-    onUserClick: (Map<String, Any>) -> Unit
+    onUserClick: (Map<String, Any>) -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     if (followingUsers.isEmpty()) {
         Text(
@@ -826,6 +906,7 @@ fun LocalizedFollowingContent(
             items(followingUsers) { userData ->
                 val fullName = userData["fullName"]?.toString() ?: "Unknown User"
                 val focusAreas = userData["focusAreas"] as? List<String>
+                val uid = userData["uid"]?.toString() ?: ""
 
                 Card(
                     modifier = Modifier
@@ -869,10 +950,29 @@ fun LocalizedFollowingContent(
                             }
                         }
 
-                        Icon(
-                            Icons.Default.ChevronRight,
-                            contentDescription = "View profile"
-                        )
+                        // Message button
+                        if (uid.isNotEmpty() && onStartChat != null) {
+                            Button(
+                                onClick = {
+                                    onStartChat(uid, fullName)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondary
+                                ),
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Chat,
+                                    contentDescription = "Message",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                Icons.Default.ChevronRight,
+                                contentDescription = "View profile"
+                            )
+                        }
                     }
                 }
             }
@@ -886,7 +986,8 @@ fun FollowerUserProfileScreen(
     userData: Map<String, Any>,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     val fullName = userData["fullName"]?.toString() ?: "Unknown User"
     val email = userData["email"]?.toString() ?: ""
@@ -984,57 +1085,82 @@ fun FollowerUserProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Follow/Unfollow button
+            // Action buttons
             if (uid != currentUserUid && uid.isNotEmpty()) {
-                when {
-                    isFollowing -> {
-                        Button(
-                            onClick = {
-                                socialViewModel.unfollowInFirestore(currentUserUid, uid)
-                                isFollowing = false
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Following")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Follow/Unfollow button
+                    when {
+                        isFollowing -> {
+                            Button(
+                                onClick = {
+                                    socialViewModel.unfollowInFirestore(currentUserUid, uid)
+                                    isFollowing = false
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Gray
+                                ),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Following")
+                            }
+                        }
+                        followRequestStatus == "pending" -> {
+                            Button(
+                                onClick = { /* Already sent */ },
+                                enabled = false,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Requested")
+                            }
+                        }
+                        else -> {
+                            Button(
+                                onClick = {
+                                    // Create a RawFirestoreUser object for the follow request
+                                    val rawUser = SocialViewModel.RawFirestoreUser(
+                                        uid = uid,
+                                        fullName = fullName,
+                                        email = email,
+                                        focusAreas = focusAreas,
+                                        healthConditions = healthConditions,
+                                        dateOfBirth = dateOfBirth,
+                                        gender = gender,
+                                        onboardingCompleted = onboardingCompleted
+                                    )
+                                    socialViewModel.sendFollowRequestToFirestoreUser(
+                                        fromUserUid = currentUserUid,
+                                        fromUserName = currentUser.fullName,
+                                        firestoreUser = rawUser
+                                    )
+                                    followRequestStatus = "pending"
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Follow")
+                            }
                         }
                     }
-                    followRequestStatus == "pending" -> {
-                        Button(
-                            onClick = { /* Already sent */ },
-                            enabled = false,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Requested")
-                        }
-                    }
-                    else -> {
-                        Button(
-                            onClick = {
-                                // Create a RawFirestoreUser object for the follow request
-                                val rawUser = SocialViewModel.RawFirestoreUser(
-                                    uid = uid,
-                                    fullName = fullName,
-                                    email = email,
-                                    focusAreas = focusAreas,
-                                    healthConditions = healthConditions,
-                                    dateOfBirth = dateOfBirth,
-                                    gender = gender,
-                                    onboardingCompleted = onboardingCompleted
-                                )
-                                socialViewModel.sendFollowRequestToFirestoreUser(
-                                    fromUserUid = currentUserUid,
-                                    fromUserName = currentUser.fullName,
-                                    firestoreUser = rawUser
-                                )
-                                followRequestStatus = "pending"
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Follow")
-                        }
+                    
+                    // Message button
+                    Button(
+                        onClick = {
+                            onStartChat?.invoke(uid, fullName)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Chat,
+                            contentDescription = "Message",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Message")
                     }
                 }
 
