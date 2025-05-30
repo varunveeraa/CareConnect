@@ -75,46 +75,6 @@ class ReminderViewModel : ViewModel() {
         loadReminders()
     }
     
-    fun testAddSimpleReminder() {
-        viewModelScope.launch {
-            try {
-                val testReminder = SchedulingReminder(
-                    title = "Test Reminder",
-                    startDate = "2024-01-01",
-                    endDate = "2024-01-02",
-                    reminderTime = "09:00",
-                    type = "Test",
-                    hasAccountability = false,
-                    accountabilityPartners = emptyList()
-                )
-                
-                android.util.Log.d("ReminderViewModel", "Adding test reminder...")
-                addReminder(testReminder)
-            } catch (e: Exception) {
-                android.util.Log.e("ReminderViewModel", "Error in test", e)
-            }
-        }
-    }
-    
-    fun testFirestoreConnection() {
-        viewModelScope.launch {
-            try {
-                android.util.Log.d("ReminderViewModel", "Testing Firestore connection...")
-                val success = reminderRepository.testFirestoreConnection()
-                if (success) {
-                    _message.value = "Firestore connection successful"
-                    android.util.Log.d("ReminderViewModel", "Firestore test successful")
-                } else {
-                    _message.value = "Firestore connection failed"
-                    android.util.Log.e("ReminderViewModel", "Firestore test failed")
-                }
-            } catch (e: Exception) {
-                _message.value = "Firestore test error: ${e.message}"
-                android.util.Log.e("ReminderViewModel", "Firestore test error", e)
-            }
-        }
-    }
-    
     private fun loadReminders() {
         viewModelScope.launch {
             _isLoading.value = true

@@ -90,26 +90,6 @@ fun ManageRemindersScreen(
                 }
                 
                 IconButton(
-                    onClick = { reminderViewModel.testFirestoreConnection() }
-                ) {
-                    Icon(
-                        Icons.Default.Cloud,
-                        contentDescription = "Test Connection",
-                        tint = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-                
-                IconButton(
-                    onClick = { reminderViewModel.testAddSimpleReminder() }
-                ) {
-                    Icon(
-                        Icons.Default.BugReport,
-                        contentDescription = "Test Add",
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                }
-                
-                IconButton(
                     onClick = { showAddReminderForm = !showAddReminderForm }
                 ) {
                     Icon(
@@ -143,38 +123,6 @@ fun ManageRemindersScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
-        
-        // Debug info card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = "Debug Info",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "Reminders count: ${reminders.size}",
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = "Loading: $isLoading",
-                    fontSize = 12.sp
-                )
-                Text(
-                    text = "Last message: $message",
-                    fontSize = 12.sp
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
         
         if (isLoading) {
             Box(

@@ -21,192 +21,140 @@ class ReminderRepository {
     }
     
     /**
-     * Test Firestore connection and permissions
-     */
-    suspend fun testFirestoreConnection(): Boolean {
-        return try {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                Log.e(TAG, "Test: No authenticated user")
-                return false
-            }
-            
-            Log.d(TAG, "Test: Testing Firestore connection for user: ${currentUser.uid}")
-            
-            // Try to read a simple document
-            val testDocRef = usersCollection.document(currentUser.uid)
-            val testDoc = testDocRef.get().await()
-            Log.d(TAG, "Test: Read operation successful. Document exists: ${testDoc.exists()}")
-            
-            // Try to write a simple test field
-            testDocRef.set(
-                mapOf("testField" to "testValue", "lastTest" to System.currentTimeMillis()),
-                com.google.firebase.firestore.SetOptions.merge()
-            ).await()
-            Log.d(TAG, "Test: Write operation successful")
-            
-            // Verify the write
-            val verifyDoc = testDocRef.get().await()
-            val testValue = verifyDoc.get("testField") as? String
-            Log.d(TAG, "Test: Verification successful. Test value: $testValue")
-            
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Test: Firestore connection failed: ${e.message}", e)
-            false
-        }
-    }
-
-    /**
-     * Add a new reminder to current user's profile
+     * Add a new reminder to current user's profile - SIMPLIFIED VERSION
      */
     suspend fun addReminder(reminder: SchedulingReminder): Boolean {
         return try {
-            val currentUser = auth.currentUser
-            Log.d(TAG, "Current user: ${currentUser?.uid}")
-            Log.d(TAG, "User email: ${currentUser?.email}")
-            Log.d(TAG, "User display name: ${currentUser?.displayName}")
-            
-            if (currentUser == null) {
-                Log.e(TAG, "No authenticated user")
-                return false
-            }
+            val currentUser = auth.currentUser ?: return false
             
             val reminderWithId = reminder.copy(
                 id = UUID.randomUUID().toString(),
                 createdAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
             )
             
-            Log.d(TAG, "Adding reminder for user: ${currentUser.uid}")
-            Log.d(TAG, "Reminder data: $reminderWithId")
+            // Convert to simple map for Firestore
+            val reminderMap = mapOf(
+                "id" to reminderWithId.id,
+                "title" to reminderWithId.title,
+                "startDate" to reminderWithId.startDate,
+                "endDate" to reminderWithId.endDate,
+                "reminderTime" to reminderWithId.reminderTime,
+                "type" to reminderWithId.type,
+                "hasAccountability" to reminderWithId.hasAccountability,
+                "accountabilityPartners" to reminderWithId.accountabilityPartners,
+                "createdAt" to reminderWithId.createdAt
+            )
             
-            // Use a simpler approach - always use set with merge
             val userDocRef = usersCollection.document(currentUser.uid)
-            Log.d(TAG, "User document path: ${userDocRef.path}")
             
-            // Get current reminders first
-            Log.d(TAG, "Fetching current document...")
-            val currentDoc = userDocRef.get().await()
-            Log.d(TAG, "Current document exists: ${currentDoc.exists()}")
+            // Use FieldValue.arrayUnion for simple append
+            userDocRef.update("reminders", FieldValue.arrayUnion(reminderMap)).await()
             
-            val currentReminders = if (currentDoc.exists()) {
-                Log.d(TAG, "Document data: ${currentDoc.data}")
-                val userData = currentDoc.toObject(FirestoreUser::class.java)
-                Log.d(TAG, "Parsed user data: $userData")
-                userData?.reminders ?: emptyList()
-            } else {
-                Log.d(TAG, "Document doesn't exist, starting with empty list")
-                emptyList()
-            }
-            
-            Log.d(TAG, "Current reminders count: ${currentReminders.size}")
-            
-            // Add new reminder to the list
-            val updatedReminders = currentReminders + reminderWithId
-            Log.d(TAG, "Updated reminders count: ${updatedReminders.size}")
-            
-            // Save back to Firestore
-            Log.d(TAG, "Saving to Firestore...")
-            userDocRef.set(
-                mapOf("reminders" to updatedReminders),
-                com.google.firebase.firestore.SetOptions.merge()
-            ).await()
-            
-            Log.d(TAG, "Save operation completed")
-            
-            // Verify the save
-            Log.d(TAG, "Verifying save...")
-            val verifyDoc = userDocRef.get().await()
-            Log.d(TAG, "Verify document exists: ${verifyDoc.exists()}")
-            
-            if (verifyDoc.exists()) {
-                val verifyUser = verifyDoc.toObject(FirestoreUser::class.java)
-                val verifyCount = verifyUser?.reminders?.size ?: 0
-                Log.d(TAG, "Verification: Document has ${verifyCount} reminders")
-                
-                if (verifyCount > currentReminders.size) {
-                    Log.d(TAG, "SUCCESS: Reminder was added successfully!")
-                    return true
-                } else {
-                    Log.e(TAG, "ERROR: Reminder count didn't increase")
-                    return false
-                }
-            } else {
-                Log.e(TAG, "ERROR: Verification document doesn't exist")
-                return false
-            }
-            
+            Log.d(TAG, "Reminder added successfully")
+            true
         } catch (e: Exception) {
-            Log.e(TAG, "Exception in addReminder: ${e.javaClass.simpleName}: ${e.message}", e)
-            Log.e(TAG, "Stack trace: ${e.stackTraceToString()}")
-            false
+            // If update fails (document doesn't exist), create it
+            try {
+                val currentUser = auth.currentUser ?: return false
+                val reminderWithId = reminder.copy(
+                    id = UUID.randomUUID().toString(),
+                    createdAt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                )
+                
+                val reminderMap = mapOf(
+                    "id" to reminderWithId.id,
+                    "title" to reminderWithId.title,
+                    "startDate" to reminderWithId.startDate,
+                    "endDate" to reminderWithId.endDate,
+                    "reminderTime" to reminderWithId.reminderTime,
+                    "type" to reminderWithId.type,
+                    "hasAccountability" to reminderWithId.hasAccountability,
+                    "accountabilityPartners" to reminderWithId.accountabilityPartners,
+                    "createdAt" to reminderWithId.createdAt
+                )
+                
+                usersCollection.document(currentUser.uid)
+                    .set(mapOf("reminders" to listOf(reminderMap)), com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+                
+                Log.d(TAG, "Reminder added to new document")
+                true
+            } catch (e2: Exception) {
+                Log.e(TAG, "Failed to add reminder: ${e2.message}")
+                false
+            }
         }
     }
     
     /**
-     * Get all reminders for current user
+     * Get all reminders for current user - SIMPLIFIED VERSION
      */
     suspend fun getCurrentUserReminders(): List<SchedulingReminder> {
         return try {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                Log.e(TAG, "No authenticated user")
-                return emptyList()
-            }
-            
-            Log.d(TAG, "Getting reminders for user: ${currentUser.uid}")
+            val currentUser = auth.currentUser ?: return emptyList()
             
             val document = usersCollection.document(currentUser.uid).get().await()
-            Log.d(TAG, "Document exists: ${document.exists()}")
             
             if (document.exists()) {
-                val user = document.toObject(FirestoreUser::class.java)
-                val reminders = user?.reminders ?: emptyList()
-                Log.d(TAG, "Found ${reminders.size} reminders")
+                val remindersData = document.get("reminders") as? List<Map<String, Any>> ?: emptyList()
                 
-                // Log each reminder for debugging
-                reminders.forEachIndexed { index, reminder ->
-                    Log.d(TAG, "Reminder $index: ${reminder.title} - ${reminder.id}")
+                // Convert maps back to SchedulingReminder objects
+                remindersData.mapNotNull { reminderMap ->
+                    try {
+                        SchedulingReminder(
+                            id = reminderMap["id"] as? String ?: "",
+                            title = reminderMap["title"] as? String ?: "",
+                            startDate = reminderMap["startDate"] as? String ?: "",
+                            endDate = reminderMap["endDate"] as? String ?: "",
+                            reminderTime = reminderMap["reminderTime"] as? String ?: "",
+                            type = reminderMap["type"] as? String ?: "",
+                            hasAccountability = reminderMap["hasAccountability"] as? Boolean ?: false,
+                            accountabilityPartners = (reminderMap["accountabilityPartners"] as? List<String>) ?: emptyList(),
+                            createdAt = reminderMap["createdAt"] as? String ?: ""
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing reminder: $reminderMap", e)
+                        null
+                    }
                 }
-                
-                reminders
             } else {
-                Log.d(TAG, "User document does not exist")
                 emptyList()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting reminders: ${e.message}", e)
+            Log.e(TAG, "Error getting reminders: ${e.message}")
             emptyList()
         }
     }
     
     /**
-     * Delete a reminder from current user's profile
+     * Delete a reminder from current user's profile - SIMPLIFIED VERSION
      */
     suspend fun deleteReminder(reminderId: String): Boolean {
         return try {
-            val currentUser = auth.currentUser
-            if (currentUser == null) {
-                Log.e(TAG, "No authenticated user")
-                return false
-            }
+            val currentUser = auth.currentUser ?: return false
             
-            val reminders = getCurrentUserReminders()
-            val reminderToDelete = reminders.find { it.id == reminderId }
-            
-            if (reminderToDelete != null) {
-                usersCollection.document(currentUser.uid)
-                    .update("reminders", FieldValue.arrayRemove(reminderToDelete))
-                    .await()
+            val document = usersCollection.document(currentUser.uid).get().await()
+            if (document.exists()) {
+                val remindersData = document.get("reminders") as? List<Map<String, Any>> ?: emptyList()
+                val reminderToDelete = remindersData.find { it["id"] == reminderId }
                 
-                Log.d(TAG, "Reminder deleted successfully")
-                true
+                if (reminderToDelete != null) {
+                    usersCollection.document(currentUser.uid)
+                        .update("reminders", FieldValue.arrayRemove(reminderToDelete))
+                        .await()
+                    
+                    Log.d(TAG, "Reminder deleted successfully")
+                    true
+                } else {
+                    Log.e(TAG, "Reminder not found")
+                    false
+                }
             } else {
-                Log.e(TAG, "Reminder not found")
+                Log.e(TAG, "User document not found")
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting reminder", e)
+            Log.e(TAG, "Error deleting reminder: ${e.message}")
             false
         }
     }
