@@ -131,7 +131,7 @@ class HealthViewModel(context: Context) : ViewModel() {
                 val metrics = healthDataManager.fetchHealthMetrics()
                 _healthMetrics.value = metrics
                 healthDataManager.updateLastSyncTime()
-                _connectionStatus.value = "Health data synced successfully"
+                // _connectionStatus.value = "Health data synced successfully"
             } catch (e: Exception) {
                 _connectionStatus.value = "Failed to sync health data"
             } finally {

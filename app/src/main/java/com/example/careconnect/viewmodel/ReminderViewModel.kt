@@ -1,16 +1,19 @@
 package com.example.careconnect.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.careconnect.firestore.SchedulingReminder
+import com.example.careconnect.notification.ReminderNotificationService
 import com.example.careconnect.repository.ReminderRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ReminderViewModel : ViewModel() {
+class ReminderViewModel(application: Application) : AndroidViewModel(application) {
     private val reminderRepository = ReminderRepository()
+    private val notificationService = ReminderNotificationService(application.applicationContext)
     
     private val _reminders = MutableStateFlow<List<SchedulingReminder>>(emptyList())
     val reminders: StateFlow<List<SchedulingReminder>> = _reminders.asStateFlow()
@@ -24,9 +27,16 @@ class ReminderViewModel : ViewModel() {
     private val _message = MutableStateFlow("")
     val message: StateFlow<String> = _message.asStateFlow()
     
+    private val _hasNotificationPermission = MutableStateFlow(false)
+    val hasNotificationPermission: StateFlow<Boolean> = _hasNotificationPermission.asStateFlow()
+    
+    private val _hasExactAlarmPermission = MutableStateFlow(false)
+    val hasExactAlarmPermission: StateFlow<Boolean> = _hasExactAlarmPermission.asStateFlow()
+    
     init {
         loadReminders()
         loadFollowers()
+        checkPermissions()
     }
     
     fun addReminder(reminder: SchedulingReminder) {
@@ -36,7 +46,13 @@ class ReminderViewModel : ViewModel() {
                 android.util.Log.d("ReminderViewModel", "Adding reminder: ${reminder.title}")
                 val success = reminderRepository.addReminder(reminder)
                 if (success) {
-                    _message.value = "Reminder added successfully"
+                    // Schedule notification for the new reminder
+                    if (_hasNotificationPermission.value) {
+                        notificationService.scheduleNotification(reminder)
+                        _message.value = "Reminder added with notifications enabled"
+                    } else {
+                        _message.value = "Reminder added (notifications require permission)"
+                    }
                     android.util.Log.d("ReminderViewModel", "Reminder added, refreshing list...")
                     loadReminders() // Refresh the list
                 } else {
@@ -56,6 +72,9 @@ class ReminderViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                // Cancel notification first
+                notificationService.cancelNotification(reminderId)
+                
                 val success = reminderRepository.deleteReminder(reminderId)
                 if (success) {
                     _message.value = "Reminder deleted successfully"
@@ -75,6 +94,28 @@ class ReminderViewModel : ViewModel() {
         loadReminders()
     }
     
+    fun rescheduleAllNotifications() {
+        viewModelScope.launch {
+            if (_hasNotificationPermission.value) {
+                try {
+                    _reminders.value.forEach { reminder ->
+                        notificationService.scheduleNotification(reminder)
+                    }
+                    _message.value = "All reminder notifications rescheduled"
+                } catch (e: Exception) {
+                    _message.value = "Error rescheduling notifications: ${e.message}"
+                }
+            } else {
+                _message.value = "Notification permission required"
+            }
+        }
+    }
+    
+    fun checkPermissions() {
+        _hasNotificationPermission.value = notificationService.requestNotificationPermission()
+        _hasExactAlarmPermission.value = notificationService.hasExactAlarmPermission()
+    }
+    
     private fun loadReminders() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -83,6 +124,13 @@ class ReminderViewModel : ViewModel() {
                 val remindersList = reminderRepository.getCurrentUserReminders()
                 android.util.Log.d("ReminderViewModel", "Loaded ${remindersList.size} reminders")
                 _reminders.value = remindersList
+                
+                // Schedule notifications for all loaded reminders if permission is granted
+                if (_hasNotificationPermission.value) {
+                    remindersList.forEach { reminder ->
+                        notificationService.scheduleNotification(reminder)
+                    }
+                }
             } catch (e: Exception) {
                 _message.value = "Error loading reminders: ${e.message}"
                 android.util.Log.e("ReminderViewModel", "Error loading reminders", e)
