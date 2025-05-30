@@ -59,16 +59,19 @@ fun OnboardingScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
+        // Added top spacing to avoid collision with status bar
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "Welcome to CareConnect!",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineSmall, // Reduced from headlineMedium
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Text(
             text = "Let's personalize your health journey",
             style = MaterialTheme.typography.bodyLarge,
@@ -76,26 +79,47 @@ fun OnboardingScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth()
         )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
+
+        Spacer(modifier = Modifier.height(24.dp)) // Reduced spacing
+
+        // Progress indicator
+        LinearProgressIndicator(
+            progress = ((selectedHealthConditions.size + selectedFocusAreas.size) / 6f).coerceAtMost(
+                1f
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        Text(
+            text = "Please select at least 3 options from each section",
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Health Conditions Section
         Text(
             text = "What health conditions would you like support with?",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Text(
-            text = "Select all that apply",
+            text = "Select at least 3 options (${selectedHealthConditions.size}/3 minimum)",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selectedHealthConditions.size >= 3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = 4.dp)
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
+
+        Spacer(modifier = Modifier.height(12.dp)) // Reduced spacing
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier.height(300.dp),
@@ -104,7 +128,7 @@ fun OnboardingScreen(
         ) {
             items(healthConditions) { condition ->
                 val isSelected = selectedHealthConditions.contains(condition)
-                
+
                 FilterChip(
                     onClick = {
                         selectedHealthConditions = if (isSelected) {
@@ -121,25 +145,25 @@ fun OnboardingScreen(
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
+
+        Spacer(modifier = Modifier.height(24.dp)) // Reduced spacing
+
         // Focus Areas Section
         Text(
             text = "What areas would you like to focus on?",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         Text(
-            text = "Choose your health and wellness priorities",
+            text = "Select at least 3 options (${selectedFocusAreas.size}/3 minimum)",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selectedFocusAreas.size >= 3) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(top = 4.dp)
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
+
+        Spacer(modifier = Modifier.height(12.dp)) // Reduced spacing
         
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -166,8 +190,8 @@ fun OnboardingScreen(
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(40.dp))
+
+        Spacer(modifier = Modifier.height(32.dp))
         
         // Error message
         val currentState = onboardingState
@@ -182,7 +206,7 @@ fun OnboardingScreen(
         // Continue Button
         Button(
             onClick = {
-                if (selectedHealthConditions.isNotEmpty() && selectedFocusAreas.isNotEmpty()) {
+                if (selectedHealthConditions.size >= 3 && selectedFocusAreas.size >= 3) {
                     onboardingViewModel.completeOnboarding(
                         healthConditions = selectedHealthConditions.toList(),
                         focusAreas = selectedFocusAreas.toList()
@@ -190,7 +214,7 @@ fun OnboardingScreen(
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = selectedHealthConditions.isNotEmpty() && selectedFocusAreas.isNotEmpty() && onboardingState !is OnboardingState.Loading,
+            enabled = selectedHealthConditions.size >= 3 && selectedFocusAreas.size >= 3 && onboardingState !is OnboardingState.Loading,
             shape = RoundedCornerShape(12.dp)
         ) {
             if (onboardingState is OnboardingState.Loading) {
@@ -205,21 +229,45 @@ fun OnboardingScreen(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Skip button
-        TextButton(
-            onClick = {
-                onboardingViewModel.completeOnboarding(
-                    healthConditions = emptyList(),
-                    focusAreas = emptyList()
-                )
-            },
+
+        // Skip button with warning
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            enabled = onboardingState !is OnboardingState.Loading
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Skip for now")
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = "⚠️ Skipping Setup",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Text(
+                    text = "You'll be asked to complete this setup every time you log in until you select at least 3 options from each section.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+
+                TextButton(
+                    onClick = {
+                        // Skip with incomplete onboarding flag
+                        onboardingViewModel.skipOnboarding()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = onboardingState !is OnboardingState.Loading
+                ) {
+                    Text(
+                        "Skip for now (will show again)",
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(24.dp))

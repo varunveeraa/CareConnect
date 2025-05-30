@@ -54,7 +54,7 @@ fun BrowseScreen() {
         // Header
         Text(
             "Health Metrics",
-            fontSize = 24.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )

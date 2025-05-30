@@ -50,7 +50,39 @@ class OnboardingViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
-    
+
+    fun skipOnboarding() {
+        viewModelScope.launch {
+            try {
+                _onboardingState.value = OnboardingState.Loading
+
+                val currentUser = auth.currentUser
+                if (currentUser != null) {
+                    val onboardingData = hashMapOf(
+                        "healthConditions" to emptyList<String>(),
+                        "focusAreas" to emptyList<String>(),
+                        "onboardingCompleted" to false, // Mark as incomplete so it shows again
+                        "onboardingSkipped" to true,
+                        "onboardingSkippedAt" to System.currentTimeMillis()
+                    )
+
+                    // Update user document with skipped onboarding data
+                    firestore.collection("users")
+                        .document(currentUser.uid)
+                        .update(onboardingData as Map<String, Any>)
+                        .await()
+
+                    _onboardingState.value = OnboardingState.Success
+                } else {
+                    _onboardingState.value = OnboardingState.Error("User not authenticated")
+                }
+            } catch (e: Exception) {
+                _onboardingState.value =
+                    OnboardingState.Error(e.message ?: "Failed to skip onboarding")
+            }
+        }
+    }
+
     fun resetOnboardingState() {
         _onboardingState.value = OnboardingState.Idle
     }

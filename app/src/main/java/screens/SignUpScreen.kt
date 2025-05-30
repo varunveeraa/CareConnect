@@ -304,7 +304,7 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                     else -> {
                         val dobString = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
                             .format(Date(selectedDate!!))
-                        
+
                         authViewModel.signUp(
                             fullName = fullName,
                             email = email,
