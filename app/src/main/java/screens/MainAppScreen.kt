@@ -25,6 +25,7 @@ import com.example.careconnect.navigation.Screen
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.DirectMessageViewModel
+import com.example.careconnect.viewmodel.NewsViewModel
 
 data class BottomNavItem(
     val route: String,
@@ -38,6 +39,7 @@ fun MainAppScreen(
     currentUser: User,
     socialViewModel: SocialViewModel,
     authViewModel: FirebaseAuthViewModel,
+    newsViewModel: NewsViewModel,
     onNavigateToUserChats: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -131,6 +133,7 @@ fun MainAppScreen(
             currentUser = currentUser,
             socialViewModel = socialViewModel,
             authViewModel = authViewModel,
+            newsViewModel = newsViewModel,
             paddingValues = paddingValues
         )
     }

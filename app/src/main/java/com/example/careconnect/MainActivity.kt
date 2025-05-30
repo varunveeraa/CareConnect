@@ -23,6 +23,7 @@ import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
 import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
+import com.example.careconnect.viewmodel.NewsViewModel
 import com.example.careconnect.util.HealthDataInitializer
 import com.google.firebase.auth.FirebaseAuth
 
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CareConnectApp() {
     val authViewModel: FirebaseAuthViewModel = viewModel()
+    val newsViewModel: NewsViewModel = viewModel()
     val authState by authViewModel.authState.collectAsState()
     val firebaseAuth = FirebaseAuth.getInstance()
     val currentUser = firebaseAuth.currentUser
@@ -94,6 +96,7 @@ fun CareConnectApp() {
                     currentUser = currentUser,
                     socialViewModel = socialViewModel,
                     authViewModel = authViewModel,
+                    newsViewModel = newsViewModel,
                     onNavigateToUserChats = {
                         // This will be handled by internal navigation in MainAppScreen
                         // We'll need to modify MainAppScreen to handle this navigation
