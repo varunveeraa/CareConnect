@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.AppDatabase
 import com.example.careconnect.screens.MainAppScreen
@@ -24,7 +25,6 @@ import com.example.careconnect.viewmodel.SocialViewModel
 import com.example.careconnect.viewmodel.SocialViewModelFactory
 import com.example.careconnect.util.HealthDataInitializer
 import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,7 +93,11 @@ fun CareConnectApp() {
                 MainAppScreen(
                     currentUser = currentUser,
                     socialViewModel = socialViewModel,
-                    authViewModel = authViewModel
+                    authViewModel = authViewModel,
+                    onNavigateToUserChats = {
+                        // This will be handled by internal navigation in MainAppScreen
+                        // We'll need to modify MainAppScreen to handle this navigation
+                    }
                 )
             }
             is FirebaseAuthState.NeedsOnboarding -> {

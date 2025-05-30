@@ -5,6 +5,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.database.User
 import com.example.careconnect.firestore.FirestoreUser
 import com.example.careconnect.viewmodel.SocialViewModel
@@ -24,7 +27,8 @@ fun FirestoreUserProfileScreen(
     firestoreUser: FirestoreUser,
     currentUser: User,
     socialViewModel: SocialViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onStartChat: ((String, String) -> Unit)? = null
 ) {
     Scaffold(
         topBar = {
@@ -94,16 +98,44 @@ fun FirestoreUserProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Connect button (simplified for Firestore users)
-            if (firestoreUser.uid != currentUser.email) {
-                Button(
-                    onClick = {
-                        // In a real app, you'd implement the follow logic here
-                        // This would require mapping between Firestore and local user systems
-                    },
-                    modifier = Modifier.fillMaxWidth()
+            // Action buttons
+            // Temporarily always show buttons for testing
+            if (true) { // Changed from: if (firestoreUser.uid != currentUser.email) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Connect")
+                    // Connect button
+                    Button(
+                        onClick = {
+                            // In a real app, you'd implement the follow logic here
+                            // This would require mapping between Firestore and local user systems
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Connect")
+                    }
+                    
+                    // Message button
+                    if (onStartChat != null) {
+                        Button(
+                            onClick = {
+                                onStartChat(firestoreUser.uid, firestoreUser.fullName)
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            )
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Chat,
+                                contentDescription = "Message",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Message")
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

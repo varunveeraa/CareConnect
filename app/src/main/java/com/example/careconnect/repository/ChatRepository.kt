@@ -175,7 +175,7 @@ class ChatRepository {
             Log.e("ChatRepository", "Error updating chat session", e)
         }
     }
-    
+
     suspend fun sendToGemini(message: String): String = withContext(Dispatchers.IO) {
         val modelNames = listOf(
             "gemini-pro",
