@@ -16,14 +16,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+// Temporarily commenting out OSMDroid imports to fix build
+// import androidx.compose.ui.viewinterop.AndroidView
 import com.example.careconnect.api.OverpassPlace
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.infowindow.InfoWindow
+
+// import org.osmdroid.config.Configuration
+// import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+// import org.osmdroid.util.GeoPoint
+// import org.osmdroid.views.MapView
+// import org.osmdroid.views.overlay.Marker
+// import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 @Composable
 fun EmbeddedMapView(
@@ -34,21 +36,6 @@ fun EmbeddedMapView(
     onFullScreenClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var mapInitialized by remember { mutableStateOf(false) }
-    var mapError by remember { mutableStateOf(false) }
-
-    // Initialize OSMDroid configuration
-    LaunchedEffect(Unit) {
-        try {
-            Configuration.getInstance().apply {
-                userAgentValue = "CareConnect/1.0"
-                osmdroidTileCache = context.cacheDir
-            }
-            mapInitialized = true
-        } catch (e: Exception) {
-            mapError = true
-        }
-    }
 
     Card(
         modifier = modifier,
@@ -73,104 +60,56 @@ fun EmbeddedMapView(
                 else -> places
             }
 
-            if (mapInitialized && !mapError) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { ctx ->
-                        try {
-                            MapView(ctx).apply {
-                                setTileSource(TileSourceFactory.MAPNIK)
-                                setMultiTouchControls(true)
-                                controller.setZoom(14.0)
-                                controller.setCenter(GeoPoint(center.first, center.second))
-
-                                // Add markers for filtered places
-                                overlays.clear()
-                                filteredPlaces.forEach { place ->
-                                    val marker = Marker(this).apply {
-                                        position = GeoPoint(place.lat, place.lon)
-                                        title = place.name
-                                        snippet = buildString {
-                                            append(place.amenity.replaceFirstChar { it.uppercase() })
-                                            place.address?.let { append("\n$it") }
-                                            place.phone?.let { append("\n📞 $it") }
-                                            place.openingHours?.let { append("\n🕒 $it") }
-                                        }
-                                    }
-                                    overlays.add(marker)
-                                }
-                                invalidate()
-                            }
-                        } catch (e: Exception) {
-                            // Return a simple view if map creation fails
-                            MapView(ctx)
-                        }
-                    },
-                    update = { mapView ->
-                        try {
-                            mapView.controller.animateTo(GeoPoint(center.first, center.second))
-
-                            mapView.overlays.clear()
-                            filteredPlaces.forEach { place ->
-                                val marker = Marker(mapView).apply {
-                                    position = GeoPoint(place.lat, place.lon)
-                                    title = place.name
-                                    snippet = buildString {
-                                        append(place.amenity.replaceFirstChar { it.uppercase() })
-                                        place.address?.let { append("\n$it") }
-                                        place.phone?.let { append("\n📞 $it") }
-                                        place.openingHours?.let { append("\n🕒 $it") }
-                                    }
-                                }
-                                mapView.overlays.add(marker)
-                            }
-                            mapView.invalidate()
-                        } catch (e: Exception) {
-                            // Handle map update errors silently
-                        }
-                    }
-                )
-            } else {
-                // Fallback view when map is not initialized or has error
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.LightGray),
-                    contentAlignment = Alignment.Center
+            // Temporary placeholder until OSMDroid is properly configured
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Map,
-                            contentDescription = "Map",
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = "Map",
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
 
-                        Text(
-                            text = if (mapError) "Map Error" else "Map Loading...",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = "Center: ${String.format("%.4f", center.first)}, ${
-                                String.format(
-                                    "%.4f",
-                                    center.second
-                                )
-                            }",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Text(
+                        text = "Interactive Map View",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
 
-                        Text(
-                            text = "Showing ${filteredPlaces.size} markers",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = "Center: ${
+                            String.format(
+                                "%.4f",
+                                center.first
+                            )
+                        }, ${String.format("%.4f", center.second)}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "Showing ${filteredPlaces.size} markers",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Map loading...",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
@@ -206,21 +145,6 @@ fun FullScreenMapView(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    var mapInitialized by remember { mutableStateOf(false) }
-    var mapError by remember { mutableStateOf(false) }
-
-    // Initialize OSMDroid configuration
-    LaunchedEffect(Unit) {
-        try {
-            Configuration.getInstance().apply {
-                userAgentValue = "CareConnect/1.0"
-                osmdroidTileCache = context.cacheDir
-            }
-            mapInitialized = true
-        } catch (e: Exception) {
-            mapError = true
-        }
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Filter places based on selected type
@@ -228,115 +152,65 @@ fun FullScreenMapView(
             "pharmacy" -> places.filter {
                 it.amenity == "pharmacy" || it.tags?.get("shop") == "chemist"
             }
-
             "clinic" -> places.filter {
                 it.amenity in listOf("clinic", "hospital", "doctors", "dentist") ||
                         it.tags?.get("healthcare") in listOf(
                     "clinic", "hospital", "doctor", "centre", "dentist"
                 )
             }
-
             else -> places
         }
 
-        if (mapInitialized && !mapError) {
-            AndroidView(
-                modifier = Modifier.fillMaxSize(),
-                factory = { ctx ->
-                    try {
-                        MapView(ctx).apply {
-                            setTileSource(TileSourceFactory.MAPNIK)
-                            setMultiTouchControls(true)
-                            controller.setZoom(15.0)
-                            controller.setCenter(GeoPoint(center.first, center.second))
-
-                            // Add markers
-                            overlays.clear()
-                            filteredPlaces.forEach { place ->
-                                val marker = Marker(this).apply {
-                                    position = GeoPoint(place.lat, place.lon)
-                                    title = place.name
-                                    snippet = buildString {
-                                        append(place.amenity.replaceFirstChar { it.uppercase() })
-                                        place.address?.let { append("\n$it") }
-                                        place.phone?.let { append("\n📞 $it") }
-                                        place.openingHours?.let { append("\n🕒 $it") }
-                                    }
-                                }
-                                overlays.add(marker)
-                            }
-                            invalidate()
-                        }
-                    } catch (e: Exception) {
-                        // Return a simple view if map creation fails
-                        MapView(ctx)
-                    }
-                },
-                update = { mapView ->
-                    try {
-                        mapView.controller.animateTo(GeoPoint(center.first, center.second))
-
-                        mapView.overlays.clear()
-                        filteredPlaces.forEach { place ->
-                            val marker = Marker(mapView).apply {
-                                position = GeoPoint(place.lat, place.lon)
-                                title = place.name
-                                snippet = buildString {
-                                    append(place.amenity.replaceFirstChar { it.uppercase() })
-                                    place.address?.let { append("\n$it") }
-                                    place.phone?.let { append("\n📞 $it") }
-                                    place.openingHours?.let { append("\n🕒 $it") }
-                                }
-                            }
-                            mapView.overlays.add(marker)
-                        }
-                        mapView.invalidate()
-                    } catch (e: Exception) {
-                        // Handle errors silently
-                    }
-                }
-            )
-        } else {
-            // Fallback view
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.LightGray),
-                contentAlignment = Alignment.Center
+        // Temporary placeholder for full screen map
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.Map,
-                        contentDescription = "Map",
-                        modifier = Modifier.size(72.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                Icon(
+                    Icons.Default.Map,
+                    contentDescription = "Map",
+                    modifier = Modifier.size(72.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
 
-                    Text(
-                        text = if (mapError) "Map Error" else "Full Screen Map Loading...",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = "Center: ${
-                            String.format(
-                                "%.4f",
-                                center.first
-                            )
-                        }, ${String.format("%.4f", center.second)}",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Text(
+                    text = "Full Screen Map View",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-                    Text(
-                        text = if (mapError) "Initialization failed" else "Would show ${filteredPlaces.size} markers",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "Center: ${String.format("%.4f", center.first)}, ${
+                        String.format(
+                            "%.4f",
+                            center.second
+                        )
+                    }",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    text = "Would show ${filteredPlaces.size} markers",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Map loading...",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 

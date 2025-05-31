@@ -85,7 +85,18 @@ dependencies {
     // Google Fit API for health data
     implementation("com.google.android.gms:play-services-fitness:21.2.0")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
-    
+
+    // OpenStreetMap and OSMDroid for maps
+    implementation("org.osmdroid:osmdroid-android:6.1.17")
+    implementation("org.osmdroid:osmdroid-wms:6.1.17")
+    implementation("org.osmdroid:osmdroid-mapsforge:6.1.17")
+
+    // Coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    // Permission handling
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
     // Location services
     implementation("com.google.android.gms:play-services-location:21.2.0")
     
