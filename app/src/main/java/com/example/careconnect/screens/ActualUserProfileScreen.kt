@@ -72,7 +72,7 @@ fun ActualUserProfileScreen(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
-            
+
             Text(
                 text = actualUser.email,
                 fontSize = 14.sp,

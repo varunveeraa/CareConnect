@@ -1,0 +1,37 @@
+Index: app/src/main/java/com/example/careconnect/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.careconnect\r\n\r\nimport android.os.Bundle\r\nimport androidx.activity.ComponentActivity\r\nimport androidx.activity.compose.setContent\r\nimport androidx.activity.enableEdgeToEdge\r\nimport androidx.compose.foundation.layout.Box\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.foundation.layout.padding\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.platform.LocalContext\r\nimport androidx.lifecycle.viewmodel.compose.viewModel\r\nimport com.example.careconnect.database.AppDatabase\r\nimport com.example.careconnect.screens.MainAppScreen\r\nimport com.example.careconnect.screens.AuthScreen\r\nimport com.example.careconnect.screens.OnboardingScreen\r\nimport com.example.careconnect.repository.SocialRepository\r\nimport com.example.careconnect.ui.theme.CareConnectTheme\r\nimport com.example.careconnect.viewmodel.FirebaseAuthViewModel\r\nimport com.example.careconnect.viewmodel.FirebaseAuthState\r\nimport com.example.careconnect.viewmodel.SocialViewModel\r\nimport com.example.careconnect.viewmodel.SocialViewModelFactory\r\nimport com.example.careconnect.util.HealthDataInitializer\r\nimport com.google.firebase.auth.FirebaseAuth\r\n\r\nclass MainActivity : ComponentActivity() {\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        super.onCreate(savedInstanceState)\r\n        enableEdgeToEdge()\r\n        setContent {\r\n            CareConnectTheme {\r\n                CareConnectApp()\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n@Composable\r\nfun CareConnectApp() {\r\n    val authViewModel: FirebaseAuthViewModel = viewModel()\r\n    val authState by authViewModel.authState.collectAsState()\r\n    val firebaseAuth = FirebaseAuth.getInstance()\r\n    val currentUser = firebaseAuth.currentUser\r\n    val context = LocalContext.current\r\n\r\n    // Initialize health data when app starts and user is authenticated\r\n    LaunchedEffect(authState) {\r\n        if (authState is FirebaseAuthState.Authenticated) {\r\n            HealthDataInitializer.initializeHealthDataIfNeeded(context)\r\n        }\r\n    }\r\n\r\n    Surface(modifier = Modifier.fillMaxSize()) {\r\n        when (authState) {\r\n            is FirebaseAuthState.Loading -> {\r\n                // Show loading screen while checking authentication\r\n                Box(\r\n                    modifier = Modifier.fillMaxSize(),\r\n                    contentAlignment = Alignment.Center\r\n                ) {\r\n                    CircularProgressIndicator()\r\n                }\r\n            }\r\n            is FirebaseAuthState.Authenticated -> {\r\n                // User is signed in and onboarded, show main app with navigation\r\n                val database = AppDatabase.getDatabase(context)\r\n                \r\n                val socialRepository = SocialRepository(\r\n                    userDao = database.userDao(),\r\n                    followRequestDao = database.followRequestDao(),\r\n                    followingDao = database.followingDao()\r\n                )\r\n                val socialViewModel: SocialViewModel = viewModel(\r\n                    factory = SocialViewModelFactory(socialRepository)\r\n                )\r\n                \r\n                // For now, we'll use a mock current user. In a real app, you'd get this from your auth system\r\n                val currentUser = remember { \r\n                    com.example.careconnect.database.User(\r\n                        id = 1,\r\n                        fullName = \"Current User\",\r\n                        email = currentUser?.uid ?: \"user@example.com\", // This should be the actual Firebase UID in a real app\r\n                        password = \"\",\r\n                        dateOfBirth = \"\",\r\n                        gender = \"\",\r\n                        isLoggedIn = true\r\n                    )\r\n                }\r\n                \r\n                MainAppScreen(\r\n                    currentUser = currentUser,\r\n                    socialViewModel = socialViewModel,\r\n                    authViewModel = authViewModel,\r\n                    onNavigateToUserChats = {\r\n                        // This will be handled by internal navigation in MainAppScreen\r\n                        // We'll need to modify MainAppScreen to handle this navigation\r\n                    }\r\n                )\r\n            }\r\n            is FirebaseAuthState.NeedsOnboarding -> {\r\n                // User is signed in but needs onboarding\r\n                OnboardingScreen(\r\n                    onOnboardingComplete = {\r\n                        authViewModel.onboardingCompleted()\r\n                    }\r\n                )\r\n            }\r\n            is FirebaseAuthState.Unauthenticated, is FirebaseAuthState.Error -> {\r\n                // User is not signed in, show auth screen\r\n                AuthScreen(\r\n                    authViewModel = authViewModel,\r\n                    onAuthSuccess = {\r\n                        // Navigation will be handled automatically by the ViewModel\r\n                    }\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/careconnect/MainActivity.kt b/app/src/main/java/com/example/careconnect/MainActivity.kt
+--- a/app/src/main/java/com/example/careconnect/MainActivity.kt	(revision ee560757b16c9f4c0e2fbdfee85de499e4c3f9a9)
++++ b/app/src/main/java/com/example/careconnect/MainActivity.kt	(date 1748627225906)
+@@ -23,6 +23,7 @@
+ import com.example.careconnect.viewmodel.FirebaseAuthState
+ import com.example.careconnect.viewmodel.SocialViewModel
+ import com.example.careconnect.viewmodel.SocialViewModelFactory
++import com.example.careconnect.viewmodel.NewsViewModel
+ import com.example.careconnect.util.HealthDataInitializer
+ import com.google.firebase.auth.FirebaseAuth
+ 
+@@ -76,7 +77,9 @@
+                 val socialViewModel: SocialViewModel = viewModel(
+                     factory = SocialViewModelFactory(socialRepository)
+                 )
+-                
++
++                val newsViewModel: NewsViewModel = viewModel()
++
+                 // For now, we'll use a mock current user. In a real app, you'd get this from your auth system
+                 val currentUser = remember { 
+                     com.example.careconnect.database.User(
+@@ -93,6 +96,7 @@
+                 MainAppScreen(
+                     currentUser = currentUser,
+                     socialViewModel = socialViewModel,
++                    newsViewModel = newsViewModel,
+                     authViewModel = authViewModel,
+                     onNavigateToUserChats = {
+                         // This will be handled by internal navigation in MainAppScreen

@@ -1,0 +1,11 @@
+* [33m2649e82[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mAmita3[m[33m, [m[1;32mAmita2[m[33m)[m Worked on Home Screen 1.Added images to articles. 2. Added a new screen called ArticleDetaiScreen.kt displaying the clicked articles. 3.Added Read full article button which takes each user to the site. 4.Created  NewsApiService.kt which contains the news api.
+* [33m9d8e92a[m Worked on Home Screen 1.Fixed carousel scrolling of articles 2.Made the UI more user interactive 3. Added headings, article name below  and timestamp for articles
+* [33m8a8c6a8[m Worked on Onboarding Screen 1.Fixed the skip now reload if user has not selected atleast 3 option each time he/she logs in, 2.Made the UI more user interactive 3. Reduced font size of heading.
+* [33ma02b67e[m Worked on HomeScreen Dashboard. 1.Aligning in one box
+* [33m74014d2[m Worked on HomeScreen Dashboard. 1.Added Calories 2.Added Icons for all items
+* [33m0a4ea99[m 1. Removed enter error in AI chat box and Made the size of both chat boxes compatible.
+* [33ma40ae78[m 1. Made the size of enter button same as that of chat text box.
+* [33m3c381aa[m Fixed Chat Screen 1. Implemented enter button, 2. Added Timestamp, 3. Fixed chat history message count, 4. Displayed first letter of first name in profile icon
+* [33m696c326[m Remove .idea files from tracking
+*   [33m470437c[m Clean up project files and add .gitignore
+[32m|[m[33m\[m  
