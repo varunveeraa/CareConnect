@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.careconnect.api.NewsArticle
 import com.example.careconnect.database.User
+import com.example.careconnect.ui.components.AppBackground
 import com.example.careconnect.viewmodel.NewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,114 +49,116 @@ fun HomeScreen(
             newsViewModel.loadGeneralHealthArticles()
         }
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp)
-    ) {
-        Text(
-            text = "Dashboard",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Single row with all four items in one box
-        Row(
+    AppBackground {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.LightGray, RoundedCornerShape(8.dp))
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp)
         ) {
-            MetricCard(
-                value = "1000",
-                label = "Steps",
-                icon = Icons.Default.DirectionsRun,
-                iconColor = Color.Blue
+            Text(
+                text = "Dashboard",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
             )
-            MetricCard(
-                value = "70",
-                label = "Heart Rate",
-                icon = Icons.Default.Favorite,
-                iconColor = Color.Red
-            )
-            MetricCard(
-                value = "7",
-                label = "Sleep",
-                icon = Icons.Default.Nightlight,
-                iconColor = Color.Gray
-            )
-            MetricCard(
-                value = "250",
-                label = "Calories",
-                icon = Icons.Default.LocalFireDepartment,
-                iconColor = Color(0xFF9C27B0) // Purple color
-            )
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // Reminders Section (moved above articles)
-        Text(
-            text = "Reminders",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = Color.LightGray,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Text(text = "“Hi mom, did you take your iron tablet?”")
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = { /* Send logic */ }) {
-                    Text("Send")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Articles Section
-        Text(
-            text = "Health Articles for You",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Text(
-            text = "Personalized content based on your health focus",
-            fontSize = 14.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-        )
-
-        if (isLoading) {
-            Box(
+            // Single row with all four items in one box
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
-                contentAlignment = Alignment.Center
+                    .background(Color.LightGray, RoundedCornerShape(8.dp))
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                CircularProgressIndicator()
+                MetricCard(
+                    value = "1000",
+                    label = "Steps",
+                    icon = Icons.Default.DirectionsRun,
+                    iconColor = Color.Blue
+                )
+                MetricCard(
+                    value = "70",
+                    label = "Heart Rate",
+                    icon = Icons.Default.Favorite,
+                    iconColor = Color.Red
+                )
+                MetricCard(
+                    value = "7",
+                    label = "Sleep",
+                    icon = Icons.Default.Nightlight,
+                    iconColor = Color.Gray
+                )
+                MetricCard(
+                    value = "250",
+                    label = "Calories",
+                    icon = Icons.Default.LocalFireDepartment,
+                    iconColor = Color(0xFF9C27B0) // Purple color
+                )
             }
-        } else if (articles.isEmpty()) {
-            NoArticlesMessage()
-        } else {
-            ArticlesCarousel(
-                articles = articles,
-                onArticleClick = onArticleClick
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Reminders Section (moved above articles)
+            Text(
+                text = "Reminders",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color.LightGray,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(text = "“Hi mom, did you take your iron tablet?”")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { /* Send logic */ }) {
+                        Text("Send")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Articles Section
+            Text(
+                text = "Health Articles for You",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "Personalized content based on your health focus",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+            )
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (articles.isEmpty()) {
+                NoArticlesMessage()
+            } else {
+                ArticlesCarousel(
+                    articles = articles,
+                    onArticleClick = onArticleClick
+                )
+            }
         }
     }
 }

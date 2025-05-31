@@ -2,13 +2,17 @@ package com.example.careconnect.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.FirebaseAuthState
@@ -72,6 +76,9 @@ fun LoginContent(authViewModel: FirebaseAuthViewModel) {
     val authState by authViewModel.authState.collectAsState()
     val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
 
+    // Check if all fields are filled
+    val allFieldsFilled = email.isNotBlank() && password.isNotBlank()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -90,7 +97,14 @@ fun LoginContent(authViewModel: FirebaseAuthViewModel) {
                 authViewModel.resetAuthError()
             },
             label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -103,7 +117,14 @@ fun LoginContent(authViewModel: FirebaseAuthViewModel) {
             },
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -137,9 +158,19 @@ fun LoginContent(authViewModel: FirebaseAuthViewModel) {
                     authViewModel.login(email, password)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (allFieldsFilled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                    alpha = 0.6f
+                ),
+                contentColor = Color.White
+            )
         ) {
-            Text("Login")
+            Text(
+                "Login",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 
@@ -173,6 +204,11 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
     val signUpState by authViewModel.signUpState.collectAsState()
     val genderOptions = listOf("Male", "Female", "Other")
 
+    // Check if all fields are filled
+    val allFieldsFilled = fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank() &&
+            confirmPassword.isNotBlank() && selectedDate != null && gender.isNotBlank() &&
+            password == confirmPassword
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -190,7 +226,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             onValueChange = { fullName = it },
             label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -200,7 +243,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             onValueChange = { email = it },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -220,7 +270,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                     Text("Select")
                 }
             },
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -239,7 +296,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                     .fillMaxWidth()
                     .menuAnchor(),
                 enabled = signUpState !is FirebaseSignUpState.Loading,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) }
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded) },
+                shape = RoundedCornerShape(25.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.White
+                )
             )
             ExposedDropdownMenu(
                 expanded = genderExpanded,
@@ -265,7 +329,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             label = { Text("Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -276,7 +347,14 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
             label = { Text("Confirm Password") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -316,12 +394,25 @@ fun SignUpContent(authViewModel: FirebaseAuthViewModel) {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = signUpState !is FirebaseSignUpState.Loading
+            enabled = signUpState !is FirebaseSignUpState.Loading,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (allFieldsFilled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                    alpha = 0.6f
+                ),
+                contentColor = Color.White
+            )
         ) {
             if (signUpState is FirebaseSignUpState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = Color.White
+                )
             } else {
-                Text("Sign Up")
+                Text(
+                    "Sign Up",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
             }
         }
     }
@@ -357,7 +448,14 @@ fun ForgotPasswordDialog(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(25.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White
+                    )
                 )
                 
                 when (forgotPasswordState) {
@@ -386,12 +484,24 @@ fun ForgotPasswordDialog(
                         onSendEmail(email)
                     }
                 },
-                enabled = email.isNotBlank() && forgotPasswordState !is com.example.careconnect.viewmodel.ForgotPasswordState.Loading
+                enabled = email.isNotBlank() && forgotPasswordState !is com.example.careconnect.viewmodel.ForgotPasswordState.Loading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (email.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                        alpha = 0.6f
+                    ),
+                    contentColor = Color.White
+                )
             ) {
                 if (forgotPasswordState is com.example.careconnect.viewmodel.ForgotPasswordState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = Color.White
+                    )
                 } else {
-                    Text("Send")
+                    Text(
+                        "Send",
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         },

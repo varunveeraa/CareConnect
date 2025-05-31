@@ -2,6 +2,7 @@ package com.example.careconnect.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,9 @@ fun LoginScreen(
     val forgotPasswordState by authViewModel.forgotPasswordState.collectAsState()
     val isLoading = authState is FirebaseAuthState.Loading
 
+    // Check if all fields are filled
+    val allFieldsFilled = email.isNotBlank() && password.isNotBlank()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +64,14 @@ fun LoginScreen(
             },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -75,7 +86,14 @@ fun LoginScreen(
             visualTransformation = PasswordVisualTransformation(),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            enabled = !isLoading
+            enabled = !isLoading,
+            shape = RoundedCornerShape(25.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -128,12 +146,25 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            enabled = !isLoading && email.isNotBlank() && password.isNotBlank()
+            enabled = !isLoading && email.isNotBlank() && password.isNotBlank(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (allFieldsFilled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(
+                    alpha = 0.6f
+                ),
+                contentColor = Color.White
+            )
         ) {
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = Color.White
+                )
             } else {
-                Text("Log In")
+                Text(
+                    "Log In",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
             }
         }
 
@@ -189,7 +220,14 @@ fun ForgotPasswordDialog(
                     onValueChange = { email = it },
                     label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(25.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White
+                    )
                 )
             }
         },

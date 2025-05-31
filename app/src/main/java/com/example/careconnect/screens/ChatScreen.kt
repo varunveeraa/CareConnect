@@ -36,6 +36,7 @@ import com.example.careconnect.firestore.ChatSession
 import com.example.careconnect.viewmodel.ChatViewModel
 import com.example.careconnect.viewmodel.ChatViewModelFactory
 import com.example.careconnect.util.ChatDataFixer
+import com.example.careconnect.ui.components.AppBackground
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -85,112 +86,114 @@ fun ChatScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Header with history toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    AppBackground {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text(
-                text = if (showChatHistory) "Chat History" else "AI Assistant",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            // Header with history toggle
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (showChatHistory) "Chat History" else "AI Assistant",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Row {
-                if (!showChatHistory && currentChatId != null) {
-                    IconButton(onClick = { chatViewModel.startNewChat() }) {
-                        Icon(Icons.Default.Add, contentDescription = "New Chat")
+                Row {
+                    if (!showChatHistory && currentChatId != null) {
+                        IconButton(onClick = { chatViewModel.startNewChat() }) {
+                            Icon(Icons.Default.Add, contentDescription = "New Chat")
+                        }
+                    }
+                    IconButton(onClick = { showChatHistory = !showChatHistory }) {
+                        Icon(
+                            if (showChatHistory) Icons.AutoMirrored.Filled.Chat else Icons.Default.History,
+                            contentDescription = if (showChatHistory) "Current Chat" else "Chat History"
+                        )
                     }
                 }
-                IconButton(onClick = { showChatHistory = !showChatHistory }) {
-                    Icon(
-                        if (showChatHistory) Icons.AutoMirrored.Filled.Chat else Icons.Default.History,
-                        contentDescription = if (showChatHistory) "Current Chat" else "Chat History"
-                    )
-                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (showChatHistory) {
-            // Chat History View
-            ChatHistoryView(
-                chatSessions = chatSessions,
-                onChatSelect = { session ->
-                    chatViewModel.selectChat(session.id, currentUserUid)
-                    showChatHistory = false
-                }
-            )
-        } else {
-            // Current Chat View
-            Column(modifier = Modifier.weight(1f)) {
-                if (currentChatMessages.isEmpty() && currentChatId == null) {
-                    // Welcome message for new chat
-                    WelcomeMessage()
-                } else {
-                    // Chat messages
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        state = listState,
-                        reverseLayout = false,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(currentChatMessages) { message ->
-                            ChatBubble(message = message, currentUser = currentUser)
-                        }
+            if (showChatHistory) {
+                // Chat History View
+                ChatHistoryView(
+                    chatSessions = chatSessions,
+                    onChatSelect = { session ->
+                        chatViewModel.selectChat(session.id, currentUserUid)
+                        showChatHistory = false
+                    }
+                )
+            } else {
+                // Current Chat View
+                Column(modifier = Modifier.weight(1f)) {
+                    if (currentChatMessages.isEmpty() && currentChatId == null) {
+                        // Welcome message for new chat
+                        WelcomeMessage()
+                    } else {
+                        // Chat messages
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            state = listState,
+                            reverseLayout = false,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(currentChatMessages) { message ->
+                                ChatBubble(message = message, currentUser = currentUser)
+                            }
 
-                        if (isLoading) {
-                            item {
-                                TypingIndicator()
+                            if (isLoading) {
+                                item {
+                                    TypingIndicator()
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Message input
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = messageText,
-                    onValueChange = { messageText = it },
-                    placeholder = { Text("Ask me anything...") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(25.dp),
-                    enabled = !isLoading,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Send
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = { sendMessage() }
-                    )
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                OutlinedButton(
-                    onClick = { sendMessage() },
-                    enabled = messageText.isNotBlank() && !isLoading,
-                    shape = RoundedCornerShape(25.dp),
-                    modifier = Modifier.height(56.dp),
-                    contentPadding = PaddingValues(16.dp)
+                // Message input
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        modifier = Modifier.size(24.dp)
+                    OutlinedTextField(
+                        value = messageText,
+                        onValueChange = { messageText = it },
+                        placeholder = { Text("Ask me anything...") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(25.dp),
+                        enabled = !isLoading,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Send
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onSend = { sendMessage() }
+                        )
                     )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    OutlinedButton(
+                        onClick = { sendMessage() },
+                        enabled = messageText.isNotBlank() && !isLoading,
+                        shape = RoundedCornerShape(25.dp),
+                        modifier = Modifier.height(56.dp),
+                        contentPadding = PaddingValues(16.dp)
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }

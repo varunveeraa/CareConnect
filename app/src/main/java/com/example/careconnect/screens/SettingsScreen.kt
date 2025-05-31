@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.careconnect.ui.components.AppBackground
 import com.example.careconnect.viewmodel.FirebaseAuthViewModel
 import com.example.careconnect.viewmodel.HealthViewModel
 import com.example.careconnect.health.WearableType
@@ -39,101 +40,103 @@ fun SettingsScreen(
     val healthMetrics by healthViewModel.healthMetrics.collectAsState()
     val connectionStatus by healthViewModel.connectionStatus.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxSize()
-    ) {
-        Text(
-            text = "Account",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        HorizontalDivider()
-
-        SettingsRow("Profile") { /* TODO: Navigate to Profile */ }
-        SettingsRow("Notifications") { /* TODO: Navigate to Notifications */ }
-        SettingsRow("Reminders") { /* TODO: Navigate to Reminders */ }
-
-        // Wearable Connection Section
-        Row(
+    AppBackground {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showWearableDialog = true }
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
+                .fillMaxSize()
         ) {
-            Column {
-                Text("Connect Wearable", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                Text(
-                    text = if (isConnected) "Connected to ${connectedWearable?.displayName}" else "Not connected",
-                    fontSize = 12.sp,
-                    color = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = "Account",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            HorizontalDivider()
+
+            SettingsRow("Profile") { /* TODO: Navigate to Profile */ }
+            SettingsRow("Notifications") { /* TODO: Navigate to Notifications */ }
+            SettingsRow("Reminders") { /* TODO: Navigate to Reminders */ }
+
+            // Wearable Connection Section
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showWearableDialog = true }
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Connect Wearable", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        text = if (isConnected) "Connected to ${connectedWearable?.displayName}" else "Not connected",
+                        fontSize = 12.sp,
+                        color = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    if (isConnected) Icons.Default.Watch else Icons.Default.WatchOff,
+                    contentDescription = "Wearable Status",
+                    modifier = Modifier.size(18.dp),
+                    tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(
-                if (isConnected) Icons.Default.Watch else Icons.Default.WatchOff,
-                contentDescription = "Wearable Status",
-                modifier = Modifier.size(18.dp),
-                tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
 
-        // Health Metrics Section (only show if connected)
-        if (isConnected && healthMetrics != null) {
+            // Health Metrics Section (only show if connected)
+            if (isConnected && healthMetrics != null) {
+                HorizontalDivider()
+                Text(
+                    "Health data syncing in background...",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Accessibility", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Switch(
+                    checked = accessibilityEnabled,
+                    onCheckedChange = { accessibilityEnabled = it }
+                )
+            }
+
             HorizontalDivider()
-            Text(
-                "Health data syncing in background...",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-        }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Accessibility", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Switch(
-                checked = accessibilityEnabled,
-                onCheckedChange = { accessibilityEnabled = it }
-            )
-        }
+            SettingsRow("Help") { /* TODO: Navigate to Help */ }
 
-        HorizontalDivider()
+            HorizontalDivider()
 
-        SettingsRow("Help") { /* TODO: Navigate to Help */ }
-        
-        HorizontalDivider()
-        
-        // Sign Out Button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showSignOutDialog = true }
-                .padding(vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Sign Out", 
-                fontSize = 16.sp, 
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.error
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.ExitToApp, 
-                contentDescription = "Sign Out",
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.error
-            )
+            // Sign Out Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSignOutDialog = true }
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Sign Out",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.ExitToApp,
+                    contentDescription = "Sign Out",
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
     

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import com.example.careconnect.health.DailyHealthData
 import com.example.careconnect.health.HealthDataManager
 import com.example.careconnect.health.MetricsPeriod
+import com.example.careconnect.ui.components.AppBackground
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
@@ -45,55 +46,57 @@ fun BrowseScreen() {
             isLoading = false
         }
     }
-    
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxSize()
-    ) {
-        // Header
-        Text(
-            "Health Metrics",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-        
-        // Period Selection
-        PeriodSelector(
-            selectedPeriod = selectedPeriod,
-            onPeriodSelected = { selectedPeriod = it }
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (healthData.isEmpty()) {
-            NoDataMessage()
-        } else {
-            // Metrics Summary Cards
-            MetricsSummaryCards(healthData)
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Detailed List
+
+    AppBackground {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize()
+        ) {
+            // Header
             Text(
-                "Detailed View",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp)
+                "Health Metrics",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
-            
-            LazyColumn {
-                items(healthData.sortedByDescending { it.timestamp }) { data ->
-                    HealthDataCard(data)
-                    Spacer(modifier = Modifier.height(8.dp))
+
+            // Period Selection
+            PeriodSelector(
+                selectedPeriod = selectedPeriod,
+                onPeriodSelected = { selectedPeriod = it }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (healthData.isEmpty()) {
+                NoDataMessage()
+            } else {
+                // Metrics Summary Cards
+                MetricsSummaryCards(healthData)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Detailed List
+                Text(
+                    "Detailed View",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn {
+                    items(healthData.sortedByDescending { it.timestamp }) { data ->
+                        HealthDataCard(data)
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
             }
         }
